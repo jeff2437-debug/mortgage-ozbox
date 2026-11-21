@@ -9,7 +9,7 @@ const SITE_URL = 'https://mortgage.ozbox.org';
 const SITE_NAME = 'Mortgage Maths';
 const CONTACT_EMAIL = 'contact@ozbox.org';
 const ADSENSE_CLIENT = 'ca-pub-3136341800882537';
-const CF_BEACON = process.env.CF_BEACON || '';
+const CF_BEACON = 'aee6d3fcc638488697a52d626443492d';
 const REVIEWED = 'November 2026';
 const OUT = 'site';
 
