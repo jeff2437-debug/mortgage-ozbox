@@ -32,7 +32,7 @@ function init(box) {
     <label class="radio"><input type="radio" name="mode" value="own"${st.mode === 'own' ? ' checked' : ''}> My own amount
       <span class="field small"><i>$</i><input id="f-own" type="number" inputmode="decimal" min="0" step="10" aria-label="Your regular repayment" value="${st.own || ''}"></span></label>
   </fieldset>
-  <label class="extra">Extra repayment each <span id="o-per">month</span> <span class="field"><i>$</i><input id="f-extra" type="number" inputmode="decimal" min="0" step="10" value="${st.extra}"></span></label>
+  <label class="extra"><span>Extra repayment each <span id="o-per">month</span></span> <span class="field"><i>$</i><input id="f-extra" type="number" inputmode="decimal" min="0" step="10" value="${st.extra}"></span></label>
 </form>
 <div class="results" aria-live="polite">
   <div class="stats" id="o-stats"></div>

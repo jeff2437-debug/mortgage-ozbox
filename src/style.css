@@ -20,8 +20,8 @@ h3{font-size:1.05rem;margin:1.2rem 0 .3rem}
 .lede{font-size:1.1rem;color:var(--muted);max-width:46rem}
 .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:1.1rem;margin:1.2rem 0}
 /* calculator */
-#calc{min-height:1250px}
-@media(max-width:620px){#calc{min-height:1700px}}
+#calc{min-height:1060px}
+@media(max-width:620px){#calc{min-height:1500px}}
 .inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:.8rem 1rem;margin:0 0 1rem}
 .inputs label,.inputs legend{display:flex;flex-direction:column;gap:.25rem;font-size:.92rem;color:var(--muted);font-weight:600}
 .field{display:flex;align-items:center;border:1px solid #b9cbc7;border-radius:8px;background:#fff;overflow:hidden}
