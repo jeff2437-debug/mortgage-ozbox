@@ -103,7 +103,8 @@ function init(box) {
     const series = [];
     if (b) series.push({ pts: a.points, color: '#c2410c', name: st.mode === 'own' ? 'Without extra' : 'Minimum repayments' });
     series.push({ pts: main.points, color: '#1d5fc4', name: b ? `With ${money(st.extra, 0)} extra` : 'Loan balance' });
-    chart.update(series, Math.max(st.years, Math.ceil(a.repaid ? a.days / 365 : main.days / 365)));
+    // fit the x-axis to the last payoff (rounded up to a whole year) so the lines end near the right edge
+    chart.update(series, Math.max(1, Math.ceil(Math.max(...series.map(s => s.pts[s.pts.length - 1][0])) - 1e-6)));
 
     $('#o-table').innerHTML = `<thead><tr><th scope="col">Year</th><th scope="col">Repaid</th><th scope="col">Interest</th><th scope="col">Balance at end</th></tr></thead><tbody>` +
       main.years.map(y => `<tr><td>${y.year}</td><td>${money(y.paid)}</td><td>${money(y.interest)}</td><td>${money(y.balance)}</td></tr>`).join('') + '</tbody>';
@@ -137,7 +138,7 @@ function makeChart(host) {
       gGrid.append(el('line', { x1: L, x2: W - R, y1: y, y2: y, class: k ? 'grid' : 'axis' }));
       const t = el('text', { x: L - 6, y: y + 4, 'text-anchor': 'end', class: 'tick' }); t.textContent = short(v); gGrid.append(t);
     }
-    const step = xMax <= 10 ? 1 : xMax <= 25 ? 5 : xMax <= 45 ? 5 : 10;
+    const step = xMax <= 6 ? 1 : xMax <= 12 ? 2 : xMax <= 45 ? 5 : 10;
     for (let x = 0; x <= xMax + 1e-9; x += step) {
       const t = el('text', { x: xs(x), y: H - B + 16, 'text-anchor': 'middle', class: 'tick' }); t.textContent = x; gGrid.append(t);
     }
