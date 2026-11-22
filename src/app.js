@@ -18,12 +18,14 @@ function init(box) {
     mode: q.get('repay') ? 'own' : 'min',
     own: num('repay', 0),
     extra: num('extra', box.dataset.extra != null ? +box.dataset.extra : 200),
+    ahead: num('ahead', 0),
     rdAmt: num('redraw', 0),
     rdAt: num('redrawAt', 5),
   };
 
   box.innerHTML = `
 <form class="inputs" novalidate>
+  <p class="hint full">Already paying off a loan? Enter what you owe now and the years left, and under Redraw, how far ahead of your repayments you are.</p>
   <label>Loan amount <span class="field"><i>$</i><input id="f-loan" type="number" inputmode="decimal" min="0" step="1000" value="${st.principal}"></span></label>
   <label>Interest rate <span class="field"><input id="f-rate" type="number" inputmode="decimal" min="0" max="30" step="0.01" value="${st.rate}"><i>% p.a.</i></span></label>
   <label>Loan term <span class="field"><input id="f-years" type="number" inputmode="numeric" min="1" max="40" step="1" value="${st.years}"><i>years</i></span></label>
@@ -36,6 +38,7 @@ function init(box) {
   </fieldset>
   <label class="extra"><span>Extra repayment each <span id="o-per">month</span></span> <span class="field"><i>$</i><input id="f-extra" type="number" inputmode="decimal" min="0" step="10" value="${st.extra}"></span></label>
   <fieldset class="repay redraw"><legend>Redraw (optional)</legend>
+    <label class="radio">Already ahead (available to redraw now) <span class="field small"><i>$</i><input id="f-ahead" type="number" inputmode="decimal" min="0" step="1000" aria-label="Amount already available to redraw" value="${st.ahead || ''}" placeholder="0"></span></label>
     <label class="radio">Take out <span class="field small"><i>$</i><input id="f-rdamt" type="number" inputmode="decimal" min="0" step="1000" aria-label="Amount to redraw" value="${st.rdAmt || ''}" placeholder="0"></span>
       after <span class="field small yrs"><input id="f-rdat" type="number" inputmode="decimal" min="0" max="40" step="1" aria-label="Years until the redraw" value="${st.rdAt}"><i>years</i></span></label>
     <small class="hint">Redraw lets you take back money you've paid ahead of the minimum. Your repayment usually stays the same, so the loan runs longer.</small>
@@ -70,6 +73,7 @@ function init(box) {
     st.mode = $('[name=mode]:checked').value;
     st.own = Math.max(0, f('#f-own') || 0);
     st.extra = Math.max(0, f('#f-extra') || 0);
+    st.ahead = Math.max(0, f('#f-ahead') || 0);
     st.rdAmt = Math.max(0, f('#f-rdamt') || 0);
     st.rdAt = Math.min(40, Math.max(0, f('#f-rdat') || 0));
     run();
@@ -78,12 +82,13 @@ function init(box) {
   function run() {
     const per = PAY_LABEL[st.pay];
     $('#o-per').textContent = per;
-    const min = requiredRepayment(st);
+    // Being ahead doesn't lower the required repayment: it's set on the scheduled balance (what you owe + what you're ahead).
+    const min = requiredRepayment({ ...st, principal: st.principal + st.ahead });
     $('#o-min').textContent = st.principal ? `${money(min, 2)} a ${per}` : '–';
     if (!$('#f-own').value) $('#f-own').placeholder = min.toFixed(0);
     const base = st.mode === 'own' && st.own > 0 ? st.own : min;
     const stats = $('#o-stats'), msg = $('#o-msg');
-    $('#o-link').href = '?' + new URLSearchParams({ loan: st.principal, rate: st.rate, years: st.years, pay: st.pay, charge: st.charge, extra: st.extra, ...(st.mode === 'own' && st.own ? { repay: st.own } : {}), ...(st.rdAmt ? { redraw: st.rdAmt, redrawAt: st.rdAt } : {}) });
+    $('#o-link').href = '?' + new URLSearchParams({ loan: st.principal, rate: st.rate, years: st.years, pay: st.pay, charge: st.charge, extra: st.extra, ...(st.mode === 'own' && st.own ? { repay: st.own } : {}), ...(st.ahead ? { ahead: st.ahead } : {}), ...(st.rdAmt ? { redraw: st.rdAmt, redrawAt: st.rdAt } : {}) });
     if (!st.principal) { stats.innerHTML = ''; msg.textContent = 'Enter a loan amount to start.'; chart.update([]); $('#o-table').innerHTML = ''; return; }
 
     const a = simulate({ ...st, repayment: base, extra: 0 });
@@ -103,19 +108,21 @@ function init(box) {
 
     // Redraw: limited to what you've paid ahead of the minimum-repayment schedule by then.
     let c = null, rdNote = '';
-    if (st.rdAmt > 0 && !(st.rdAt > 0)) rdNote = `At the start of the loan you haven't paid anything ahead of the minimum yet, so there's nothing to redraw. Choose a time after the loan starts, e.g. 1 year or 6 months (0.5).`;
-    else if (st.rdAmt > 0) {
-      const sched = Math.abs(base - min) < 0.005 ? a : simulate({ ...st, repayment: min, extra: 0 });
+    if (st.rdAmt > 0) {
+      const when = st.rdAt > 0 ? `after ${st.rdAt} year${st.rdAt === 1 ? '' : 's'}` : 'now';
+      const sched = simulate({ ...st, principal: st.principal + st.ahead, repayment: min, extra: 0 });
       if (st.rdAt * 365 >= plan.days) rdNote = `The loan is already paid off before year ${st.rdAt}, so there's nothing to redraw then.`;
       else {
         const avail = Math.max(0, Math.floor(balanceAt(sched.points, st.rdAt) - balanceAt(plan.points, st.rdAt)));
         const amt = Math.min(st.rdAmt, avail);
-        if (amt <= 0) rdNote = `By year ${st.rdAt} you won't have paid ahead of the minimum repayments, so there's nothing available to redraw.`;
+        if (amt <= 0) rdNote = st.rdAt > 0
+          ? `By year ${st.rdAt} you won't be ahead of the minimum repayments, so there's nothing available to redraw.`
+          : `There's nothing available to redraw now. If you're already ahead on an existing loan, enter that amount in "Already ahead".`;
         else {
           c = simulate({ ...st, repayment: base, extra: st.extra, redrawAt: st.rdAt, redrawAmount: amt });
-          if (amt < st.rdAmt) rdNote = `Only about ${money(avail)} would be available to redraw after ${st.rdAt} years (what you've paid ahead of the minimum), so the calculator uses that. `;
+          if (amt < st.rdAmt) rdNote = `Only about ${money(avail)} would be available to redraw ${when} (what you're ahead of the minimum), so the calculator uses that. `;
           rdNote += c.repaid
-            ? `Redrawing ${money(amt)} after ${st.rdAt} years adds ${duration(Math.max(0, c.days - plan.days))} to the loan and ${money(c.totalInterest - plan.totalInterest)} in interest, compared with leaving it in.`
+            ? `Redrawing ${money(amt)} ${when} adds ${duration(Math.max(0, c.days - plan.days))} to the loan and ${money(c.totalInterest - plan.totalInterest)} in interest, compared with leaving it in.`
             : `After redrawing ${money(amt)}, these repayments wouldn't clear the loan within 60 years.`;
         }
       }
@@ -125,7 +132,7 @@ function init(box) {
     const s = (label, value, sub = '', cls = '') => `<div class="stat ${cls}"><small>${label}</small><b>${value}</b>${sub ? `<span>${sub}</span>` : ''}</div>`;
     const cmp = main !== a && a.repaid;
     let html = s('Regular repayment', `${money(base + st.extra, 2)}`, `a ${per}${st.extra ? ` (${money(base, 2)} + ${money(st.extra, 2)} extra)` : ''}`);
-    html += s('Paid off in', duration(main.days), cmp ? (main.days <= a.days ? `${duration(a.days - main.days)} sooner` : `${duration(main.days - a.days)} later`) : `${main.periods.toLocaleString('en-AU')} repayments`, 'good');
+    html += s('Paid off in', duration(main.days), cmp ? (main.days <= a.days ? `${duration(a.days - main.days)} sooner` : `${duration(main.days - a.days)} later`) : (main.days < st.years * 365 - 15 ? `${duration(st.years * 365 - main.days)} before the ${st.years}-year term ends` : `${main.periods.toLocaleString('en-AU')} repayments`), 'good');
     html += s('Total interest', money(main.totalInterest), cmp ? (a.totalInterest >= main.totalInterest ? `saves ${money(a.totalInterest - main.totalInterest)}` : `costs ${money(main.totalInterest - a.totalInterest)} more`) : '', cmp ? 'good' : '');
     html += s('Total repaid', money(main.totalPaid), `on a ${money(st.principal)} loan${main.redrawn ? ` + ${money(main.redrawn)} redrawn` : ''}`);
     stats.innerHTML = html;

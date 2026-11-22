@@ -36,6 +36,7 @@ label.radio{flex-direction:row!important;flex-wrap:wrap;align-items:center;gap:.
 input[type=radio]{accent-color:var(--accent);width:1.1rem;height:1.1rem}
 .inputs label.extra{grid-column:1/-1;max-width:420px}
 .field.small.yrs{width:7.5rem}
+.inputs .hint.full{grid-column:1/-1;margin:0}
 fieldset.redraw small.hint{display:block;margin-top:.2rem}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:.6rem;margin:.4rem 0}
 .stat{background:#fff;border:1px solid var(--line);border-top:4px solid #9bb3ae;border-radius:10px;padding:.55rem .8rem}

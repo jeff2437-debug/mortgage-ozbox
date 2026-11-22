@@ -29,7 +29,7 @@ export function simulate({ principal, rate, pay = 'monthly', charge = 'monthly',
   let yr = { year: 1, interest: 0, paid: 0, balance: principal };
   const limit = maxYears * DAYS + EPS;
   const tr = redrawAt * DAYS;
-  let redrawn = 0, rdPending = redrawAmount > 0 && redrawAt > 0;
+  let redrawn = 0, rdPending = redrawAmount > 0 && redrawAt >= 0;
   while (bal > EPS) {
     const tp = kp * dp, tc = kc * dc, next = Math.min(tp, tc, rdPending ? tr : Infinity);
     if (next > limit) return finish(false);
