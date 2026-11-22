@@ -37,7 +37,7 @@ function init(box) {
   <label class="extra"><span>Extra repayment each <span id="o-per">month</span></span> <span class="field"><i>$</i><input id="f-extra" type="number" inputmode="decimal" min="0" step="10" value="${st.extra}"></span></label>
   <fieldset class="repay redraw"><legend>Redraw (optional)</legend>
     <label class="radio">Take out <span class="field small"><i>$</i><input id="f-rdamt" type="number" inputmode="decimal" min="0" step="1000" aria-label="Amount to redraw" value="${st.rdAmt || ''}" placeholder="0"></span>
-      after <span class="field small yrs"><input id="f-rdat" type="number" inputmode="decimal" min="0.1" max="40" step="1" aria-label="Years until the redraw" value="${st.rdAt}"><i>years</i></span></label>
+      after <span class="field small yrs"><input id="f-rdat" type="number" inputmode="decimal" min="0" max="40" step="1" aria-label="Years until the redraw" value="${st.rdAt}"><i>years</i></span></label>
     <small class="hint">Redraw lets you take back money you've paid ahead of the minimum. Your repayment usually stays the same, so the loan runs longer.</small>
   </fieldset>
 </form>
@@ -103,7 +103,8 @@ function init(box) {
 
     // Redraw: limited to what you've paid ahead of the minimum-repayment schedule by then.
     let c = null, rdNote = '';
-    if (st.rdAmt > 0 && st.rdAt > 0) {
+    if (st.rdAmt > 0 && !(st.rdAt > 0)) rdNote = `At the start of the loan you haven't paid anything ahead of the minimum yet, so there's nothing to redraw. Choose a time after the loan starts, e.g. 1 year or 6 months (0.5).`;
+    else if (st.rdAmt > 0) {
       const sched = Math.abs(base - min) < 0.005 ? a : simulate({ ...st, repayment: min, extra: 0 });
       if (st.rdAt * 365 >= plan.days) rdNote = `The loan is already paid off before year ${st.rdAt}, so there's nothing to redraw then.`;
       else {
