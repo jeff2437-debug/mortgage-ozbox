@@ -50,6 +50,8 @@ function init(box) {
   let timer;
   box.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(read, 120); });
   box.addEventListener('change', read);
+  // stop the mouse wheel changing a focused number field while the page scrolls
+  box.addEventListener('wheel', e => { if (e.target.type === 'number' && document.activeElement === e.target) e.target.blur(); }, { passive: true });
   $('#f-own').addEventListener('focus', () => { $('[name=mode][value=own]').checked = true; });
 
   function read() {
