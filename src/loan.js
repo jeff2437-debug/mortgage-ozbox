@@ -19,7 +19,7 @@ const EPS = 1e-9;
  *            points:Array<[number, number]>, years:Array<{year:number, interest:number, paid:number, balance:number}> }}
  * points: [years, balance] after every repayment (starts at [0, principal]).
  */
-export function simulate({ principal, rate, pay = 'monthly', charge = 'monthly', repayment, extra = 0, maxYears = 60, record = true }) {
+export function simulate({ principal, rate, pay = 'monthly', charge = 'monthly', repayment, extra = 0, redrawAt = 0, redrawAmount = 0, maxYears = 60, record = true }) {
   const np = PAY_FREQS[pay], nc = CHARGE_FREQS[charge];
   const dp = DAYS / np, dc = DAYS / nc, di = rate / 100 / DAYS;
   const amount = repayment + extra;
@@ -28,13 +28,21 @@ export function simulate({ principal, rate, pay = 'monthly', charge = 'monthly',
   const years = [];
   let yr = { year: 1, interest: 0, paid: 0, balance: principal };
   const limit = maxYears * DAYS + EPS;
+  const tr = redrawAt * DAYS;
+  let redrawn = 0, rdPending = redrawAmount > 0 && redrawAt > 0;
   while (bal > EPS) {
-    const tp = kp * dp, tc = kc * dc, next = Math.min(tp, tc);
+    const tp = kp * dp, tc = kc * dc, next = Math.min(tp, tc, rdPending ? tr : Infinity);
     if (next > limit) return finish(false);
     accrued += bal * di * (next - t);
     t = next;
     // close off calendar years for the yearly table
     while (record && t > yr.year * DAYS + EPS) { yr.balance = bal; years.push(yr); yr = { year: yr.year + 1, interest: 0, paid: 0, balance: bal }; }
+    if (rdPending && Math.abs(tr - next) < EPS) {
+      // redraw: money taken back out of the loan, so the balance jumps up
+      if (record) points.push([t / DAYS, bal]);
+      bal += redrawAmount; redrawn = redrawAmount; yr.redrawn = (yr.redrawn || 0) + redrawAmount; rdPending = false;
+      if (record) points.push([t / DAYS, bal]);
+    }
     if (Math.abs(tc - next) < EPS) { bal += accrued; totalInterest += accrued; yr.interest += accrued; accrued = 0; kc++; }
     if (Math.abs(tp - next) < EPS) {
       kp++; periods++;
@@ -54,7 +62,7 @@ export function simulate({ principal, rate, pay = 'monthly', charge = 'monthly',
 
   function finish(repaid) {
     if (record) { yr.balance = bal; years.push(yr); }
-    return { repaid, days: t, periods, totalInterest, totalPaid, points, years, repayment, extra };
+    return { repaid, days: t, periods, totalInterest, totalPaid, points, years, repayment, extra, redrawn };
   }
 }
 
@@ -85,4 +93,13 @@ export function duration(days) {
   const y = Math.floor(months / 12), m = months % 12;
   const ys = y ? `${y} year${y === 1 ? '' : 's'}` : '', ms = m ? `${m} month${m === 1 ? '' : 's'}` : '';
   return [ys, ms].filter(Boolean).join(' ') || 'less than a month';
+}
+
+/** Balance at time x (years) from a points list: the last point at or before x (0 once repaid). */
+export function balanceAt(points, x) {
+  if (!points.length) return 0;
+  if (x >= points[points.length - 1][0]) return points[points.length - 1][1];
+  let lo = 0, hi = points.length - 1;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (points[m][0] <= x + 1e-9) lo = m; else hi = m - 1; }
+  return points[lo][1];
 }

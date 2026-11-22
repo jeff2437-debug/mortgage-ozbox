@@ -1,5 +1,5 @@
 // Mortgage payoff calculator UI.
-import { simulate, requiredRepayment, firstPeriodInterest, money, duration, PAY_LABEL } from './loan.js';
+import { simulate, requiredRepayment, firstPeriodInterest, money, duration, balanceAt, PAY_LABEL } from './loan.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const box = $('#calc');
@@ -18,6 +18,8 @@ function init(box) {
     mode: q.get('repay') ? 'own' : 'min',
     own: num('repay', 0),
     extra: num('extra', box.dataset.extra != null ? +box.dataset.extra : 200),
+    rdAmt: num('redraw', 0),
+    rdAt: num('redrawAt', 5),
   };
 
   box.innerHTML = `
@@ -33,6 +35,11 @@ function init(box) {
       <span class="field small"><i>$</i><input id="f-own" type="number" inputmode="decimal" min="0" step="10" aria-label="Your regular repayment" value="${st.own || ''}"></span></label>
   </fieldset>
   <label class="extra"><span>Extra repayment each <span id="o-per">month</span></span> <span class="field"><i>$</i><input id="f-extra" type="number" inputmode="decimal" min="0" step="10" value="${st.extra}"></span></label>
+  <fieldset class="repay redraw"><legend>Redraw (optional)</legend>
+    <label class="radio">Take out <span class="field small"><i>$</i><input id="f-rdamt" type="number" inputmode="decimal" min="0" step="1000" aria-label="Amount to redraw" value="${st.rdAmt || ''}" placeholder="0"></span>
+      after <span class="field small yrs"><input id="f-rdat" type="number" inputmode="decimal" min="0.1" max="40" step="1" aria-label="Years until the redraw" value="${st.rdAt}"><i>years</i></span></label>
+    <small class="hint">Redraw lets you take back money you've paid ahead of the minimum. Your repayment usually stays the same, so the loan runs longer.</small>
+  </fieldset>
 </form>
 <div class="results" aria-live="polite">
   <div class="stats" id="o-stats"></div>
@@ -63,6 +70,8 @@ function init(box) {
     st.mode = $('[name=mode]:checked').value;
     st.own = Math.max(0, f('#f-own') || 0);
     st.extra = Math.max(0, f('#f-extra') || 0);
+    st.rdAmt = Math.max(0, f('#f-rdamt') || 0);
+    st.rdAt = Math.min(40, Math.max(0, f('#f-rdat') || 0));
     run();
   }
 
@@ -74,42 +83,67 @@ function init(box) {
     if (!$('#f-own').value) $('#f-own').placeholder = min.toFixed(0);
     const base = st.mode === 'own' && st.own > 0 ? st.own : min;
     const stats = $('#o-stats'), msg = $('#o-msg');
-    $('#o-link').href = '?' + new URLSearchParams({ loan: st.principal, rate: st.rate, years: st.years, pay: st.pay, charge: st.charge, extra: st.extra, ...(st.mode === 'own' && st.own ? { repay: st.own } : {}) });
+    $('#o-link').href = '?' + new URLSearchParams({ loan: st.principal, rate: st.rate, years: st.years, pay: st.pay, charge: st.charge, extra: st.extra, ...(st.mode === 'own' && st.own ? { repay: st.own } : {}), ...(st.rdAmt ? { redraw: st.rdAmt, redrawAt: st.rdAt } : {}) });
     if (!st.principal) { stats.innerHTML = ''; msg.textContent = 'Enter a loan amount to start.'; chart.update([]); $('#o-table').innerHTML = ''; return; }
 
     const a = simulate({ ...st, repayment: base, extra: 0 });
     const b = st.extra > 0 ? simulate({ ...st, repayment: base, extra: st.extra }) : null;
-    const main = b || a;
+    const plan = b || a; // your plan without any redraw
     const interest1 = firstPeriodInterest(st);
-    if (!main.repaid) {
+    if (!plan.repaid) {
       stats.innerHTML = '';
       msg.className = 'msg warn';
       msg.textContent = base + st.extra <= interest1
         ? `A repayment of ${money(base + st.extra, 2)} a ${per} doesn't cover the interest (about ${money(interest1, 0)} a ${per} to start), so the loan would never be repaid.`
         : `At ${money(base + st.extra, 2)} a ${per} this loan wouldn't be repaid within 60 years.`;
-      chart.update([{ pts: main.points, color: '#c2410c', name: 'Balance' }], 60);
+      chart.update([{ pts: plan.points, color: '#c2410c', name: 'Balance' }], 60);
       $('#o-table').innerHTML = '';
       return;
     }
+
+    // Redraw: limited to what you've paid ahead of the minimum-repayment schedule by then.
+    let c = null, rdNote = '';
+    if (st.rdAmt > 0 && st.rdAt > 0) {
+      const sched = Math.abs(base - min) < 0.005 ? a : simulate({ ...st, repayment: min, extra: 0 });
+      if (st.rdAt * 365 >= plan.days) rdNote = `The loan is already paid off before year ${st.rdAt}, so there's nothing to redraw then.`;
+      else {
+        const avail = Math.max(0, Math.floor(balanceAt(sched.points, st.rdAt) - balanceAt(plan.points, st.rdAt)));
+        const amt = Math.min(st.rdAmt, avail);
+        if (amt <= 0) rdNote = `By year ${st.rdAt} you won't have paid ahead of the minimum repayments, so there's nothing available to redraw.`;
+        else {
+          c = simulate({ ...st, repayment: base, extra: st.extra, redrawAt: st.rdAt, redrawAmount: amt });
+          if (amt < st.rdAmt) rdNote = `Only about ${money(avail)} would be available to redraw after ${st.rdAt} years (what you've paid ahead of the minimum), so the calculator uses that. `;
+          rdNote += c.repaid
+            ? `Redrawing ${money(amt)} after ${st.rdAt} years adds ${duration(Math.max(0, c.days - plan.days))} to the loan and ${money(c.totalInterest - plan.totalInterest)} in interest, compared with leaving it in.`
+            : `After redrawing ${money(amt)}, these repayments wouldn't clear the loan within 60 years.`;
+        }
+      }
+    }
+    const main = c && c.repaid ? c : plan;
     msg.className = 'msg';
     const s = (label, value, sub = '', cls = '') => `<div class="stat ${cls}"><small>${label}</small><b>${value}</b>${sub ? `<span>${sub}</span>` : ''}</div>`;
+    const cmp = main !== a && a.repaid;
     let html = s('Regular repayment', `${money(base + st.extra, 2)}`, `a ${per}${st.extra ? ` (${money(base, 2)} + ${money(st.extra, 2)} extra)` : ''}`);
-    html += s('Paid off in', duration(main.days), b && a.repaid ? `${duration(a.days - b.days)} sooner` : `${main.periods.toLocaleString('en-AU')} repayments`, 'good');
-    html += s('Total interest', money(main.totalInterest), b && a.repaid ? `saves ${money(a.totalInterest - b.totalInterest)}` : '', b ? 'good' : '');
-    html += s('Total repaid', money(main.totalPaid), `on a ${money(st.principal)} loan`);
+    html += s('Paid off in', duration(main.days), cmp ? (main.days <= a.days ? `${duration(a.days - main.days)} sooner` : `${duration(main.days - a.days)} later`) : `${main.periods.toLocaleString('en-AU')} repayments`, 'good');
+    html += s('Total interest', money(main.totalInterest), cmp ? (a.totalInterest >= main.totalInterest ? `saves ${money(a.totalInterest - main.totalInterest)}` : `costs ${money(main.totalInterest - a.totalInterest)} more`) : '', cmp ? 'good' : '');
+    html += s('Total repaid', money(main.totalPaid), `on a ${money(st.principal)} loan${main.redrawn ? ` + ${money(main.redrawn)} redrawn` : ''}`);
     stats.innerHTML = html;
-    if (b && !a.repaid) msg.textContent = `Without the extra ${money(st.extra, 2)}, ${money(base, 2)} a ${per} would never clear this loan.`;
-    else if (b) msg.textContent = `Adding ${money(st.extra, 2)} a ${per} cuts ${duration(a.days - b.days)} off the loan and saves ${money(a.totalInterest - b.totalInterest)} in interest.`;
-    else msg.textContent = '';
+    let text = '';
+    if (b && !a.repaid) text = `Without the extra ${money(st.extra, 2)}, ${money(base, 2)} a ${per} would never clear this loan.`;
+    else if (b) text = `Adding ${money(st.extra, 2)} a ${per} cuts ${duration(a.days - b.days)} off the loan and saves ${money(a.totalInterest - b.totalInterest)} in interest.`;
+    msg.textContent = [text, rdNote].filter(Boolean).join(' ');
 
     const series = [];
-    if (b) series.push({ pts: a.points, color: '#c2410c', name: st.mode === 'own' ? 'Without extra' : 'Minimum repayments' });
-    series.push({ pts: main.points, color: '#1d5fc4', name: b ? `With ${money(st.extra, 0)} extra` : 'Loan balance' });
+    if (b || c) series.push({ pts: a.points, color: '#c2410c', name: st.mode === 'own' ? (b ? 'Without extra' : 'Without redraw') : 'Minimum repayments' });
+    if (b) series.push({ pts: b.points, color: '#1d5fc4', name: `With ${money(st.extra, 0)} extra`, dash: !!c });
+    if (c) series.push({ pts: c.points, color: '#7c3aed', name: `${b ? 'Extra and' : 'With'} ${money(c.redrawn)} redraw` });
+    if (!series.length) series.push({ pts: a.points, color: '#1d5fc4', name: 'Loan balance' });
     // fit the x-axis to the last payoff (rounded up to a whole year) so the lines end near the right edge
     chart.update(series, Math.max(1, Math.ceil(Math.max(...series.map(s => s.pts[s.pts.length - 1][0])) - 1e-6)));
 
-    $('#o-table').innerHTML = `<thead><tr><th scope="col">Year</th><th scope="col">Repaid</th><th scope="col">Interest</th><th scope="col">Balance at end</th></tr></thead><tbody>` +
-      main.years.map(y => `<tr><td>${y.year}</td><td>${money(y.paid)}</td><td>${money(y.interest)}</td><td>${money(y.balance)}</td></tr>`).join('') + '</tbody>';
+    const rd = main.years.some(y => y.redrawn);
+    $('#o-table').innerHTML = `<thead><tr><th scope="col">Year</th><th scope="col">Repaid</th>${rd ? '<th scope="col">Redrawn</th>' : ''}<th scope="col">Interest</th><th scope="col">Balance at end</th></tr></thead><tbody>` +
+      main.years.map(y => `<tr><td>${y.year}</td><td>${money(y.paid)}</td>${rd ? `<td>${y.redrawn ? money(y.redrawn) : ''}</td>` : ''}<td>${money(y.interest)}</td><td>${money(y.balance)}</td></tr>`).join('') + '</tbody>';
   }
   read();
 }
@@ -133,7 +167,7 @@ function makeChart(host) {
     series = list; xMax = Math.max(1, years);
     let hi = 0; for (const s of list) for (const [, v] of s.pts) if (v > hi) hi = v;
     yMax = nice(hi || 1);
-    legend.innerHTML = list.length > 1 ? list.map(s => `<span><i style="background:${s.color}"></i>${s.name}</span>`).join('') : '';
+    legend.innerHTML = list.length > 1 ? list.map(s => `<span><i style="background:${s.dash ? `repeating-linear-gradient(90deg,${s.color} 0 5px,transparent 5px 8px)` : s.color}"></i>${s.name}</span>`).join('') : '';
     gGrid.innerHTML = ''; gLines.innerHTML = '';
     for (let k = 0; k <= 4; k++) {
       const v = yMax * k / 4, y = ys(v);
@@ -151,7 +185,7 @@ function makeChart(host) {
       let d = '';
       for (let i = 0; i < n; i += every) d += (d ? 'L' : 'M') + xs(s.pts[i][0]).toFixed(1) + ',' + ys(s.pts[i][1]).toFixed(1);
       const lastP = s.pts[n - 1]; if (lastP) d += 'L' + xs(lastP[0]).toFixed(1) + ',' + ys(lastP[1]).toFixed(1);
-      gLines.append(el('path', { d, fill: 'none', stroke: s.color, 'stroke-width': 2.5, 'stroke-linejoin': 'round' }));
+      gLines.append(el('path', { d, fill: 'none', stroke: s.color, 'stroke-width': 2.5, 'stroke-linejoin': 'round', ...(s.dash ? { 'stroke-dasharray': '7 5' } : {}) }));
       s.dot = el('circle', { r: 4.5, fill: s.color, stroke: '#fff', 'stroke-width': 2 }); gHover.append(s.dot);
     }
   }
