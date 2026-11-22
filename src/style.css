@@ -78,3 +78,11 @@ details.faq p{margin:.4rem 0 .2rem}
 footer.foot{background:#e3ecea;color:var(--muted);font-size:.88rem}
 footer.foot .wrap{padding:1rem}
 footer.foot a{color:var(--accent-d)}
+
+.rdcost{background:#f5f1fe;border:1px solid #ddd2fb;border-radius:12px;padding:.6rem .9rem;margin:.7rem 0}
+.rdcost h3{margin:.1rem 0 .5rem;color:#5b21b6}
+.rdgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:.6rem}
+.stat.bad{border-top-color:#7c3aed}
+.rdcost table th[scope=row]{text-align:left;font-weight:600;background:none}
+.rdcost td.diff{font-weight:700;color:#5b21b6}
+.rdcost .hint{margin:.4rem 0 0}

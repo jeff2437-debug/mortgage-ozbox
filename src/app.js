@@ -46,6 +46,7 @@ function init(box) {
 </form>
 <div class="results" aria-live="polite">
   <div class="stats" id="o-stats"></div>
+  <section class="rdcost" id="o-rd" hidden aria-label="Cost of the redraw"></section>
   <p class="msg" id="o-msg"></p>
   <div id="o-chart" class="chart"></div>
   <details class="sched"><summary>Year-by-year schedule</summary><div class="table-wrap" tabindex="0" role="region" aria-label="Year-by-year loan schedule"><table id="o-table"></table></div></details>
@@ -89,13 +90,14 @@ function init(box) {
     const base = st.mode === 'own' && st.own > 0 ? st.own : min;
     const stats = $('#o-stats'), msg = $('#o-msg');
     $('#o-link').href = '?' + new URLSearchParams({ loan: st.principal, rate: st.rate, years: st.years, pay: st.pay, charge: st.charge, extra: st.extra, ...(st.mode === 'own' && st.own ? { repay: st.own } : {}), ...(st.ahead ? { ahead: st.ahead } : {}), ...(st.rdAmt ? { redraw: st.rdAmt, redrawAt: st.rdAt } : {}) });
-    if (!st.principal) { stats.innerHTML = ''; msg.textContent = 'Enter a loan amount to start.'; chart.update([]); $('#o-table').innerHTML = ''; return; }
+    if (!st.principal) { $('#o-rd').hidden = true; stats.innerHTML = ''; msg.textContent = 'Enter a loan amount to start.'; chart.update([]); $('#o-table').innerHTML = ''; return; }
 
     const a = simulate({ ...st, repayment: base, extra: 0 });
     const b = st.extra > 0 ? simulate({ ...st, repayment: base, extra: st.extra }) : null;
     const plan = b || a; // your plan without any redraw
     const interest1 = firstPeriodInterest(st);
     if (!plan.repaid) {
+      $('#o-rd').hidden = true;
       stats.innerHTML = '';
       msg.className = 'msg warn';
       msg.textContent = base + st.extra <= interest1
@@ -136,6 +138,22 @@ function init(box) {
     html += s('Total interest', money(main.totalInterest), cmp ? (a.totalInterest >= main.totalInterest ? `saves ${money(a.totalInterest - main.totalInterest)}` : `costs ${money(main.totalInterest - a.totalInterest)} more`) : '', cmp ? 'good' : '');
     html += s('Total repaid', money(main.totalPaid), `on a ${money(st.principal)} loan${main.redrawn ? ` + ${money(main.redrawn)} redrawn` : ''}`);
     stats.innerHTML = html;
+    const rdBox = $('#o-rd');
+    if (c && c.repaid) {
+      const row = (label, x, y, d) => `<tr><th scope="row">${label}</th><td>${x}</td><td>${y}</td><td class="diff">${d}</td></tr>`;
+      const extraDays = Math.max(0, c.days - plan.days), extraInt = c.totalInterest - plan.totalInterest;
+      rdBox.innerHTML = `<h3>What the redraw costs</h3>
+<div class="rdgrid"><div class="stat bad"><small>Extra time on the loan</small><b>${extraDays > 15 ? duration(extraDays) : 'under a month'}</b></div>
+<div class="stat bad"><small>Extra interest</small><b>${money(extraInt)}</b><span>${money(extraInt / c.redrawn, 2)} for every $1 redrawn</span></div></div>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Loan with and without the redraw"><table><thead><tr><th scope="col"></th><th scope="col">Without redraw</th><th scope="col">With ${money(c.redrawn)} redraw</th><th scope="col">Difference</th></tr></thead><tbody>
+${row('Paid off in', duration(plan.days), duration(c.days), extraDays > 15 ? '+' + duration(extraDays) : '–')}
+${row('Total interest', money(plan.totalInterest), money(c.totalInterest), '+' + money(extraInt))}
+${row('Total repaid', money(plan.totalPaid), money(c.totalPaid), '+' + money(c.totalPaid - plan.totalPaid))}
+${row('Repayment', money(base + st.extra, 2), money(base + st.extra, 2), 'same')}
+</tbody></table></div>
+<p class="hint">The redrawn money costs your loan's interest rate for as long as it stays on the loan. Paying it back as extra repayments later cuts this cost.</p>`;
+      rdBox.hidden = false;
+    } else { rdBox.hidden = true; rdBox.innerHTML = ''; }
     let text = '';
     if (b && !a.repaid) text = `Without the extra ${money(st.extra, 2)}, ${money(base, 2)} a ${per} would never clear this loan.`;
     else if (b) text = `Adding ${money(st.extra, 2)} a ${per} cuts ${duration(a.days - b.days)} off the loan and saves ${money(a.totalInterest - b.totalInterest)} in interest.`;
