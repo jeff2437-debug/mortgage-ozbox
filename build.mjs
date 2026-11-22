@@ -29,6 +29,7 @@ const GUIDES = [
   ['/fortnightly-vs-monthly-repayments/', 'Fortnightly vs monthly repayments', 'Why "half the monthly repayment every fortnight" takes years off a loan.'],
   ['/how-home-loan-interest-is-calculated/', 'How home loan interest is calculated', 'Daily interest, monthly charging, and why the frequency matters a little.'],
   ['/interest-rate-changes/', 'What a rate rise or cut does', 'Repayments at every rate from 4.5% to 8%, and the trick to use after a cut.'],
+  ['/offset-vs-redraw/', 'Offset vs redraw', 'Which saves more, the real differences, and when an offset account is worth its fee.'],
 ];
 const NAV = [['/', 'Calculator'], ['/guides/', 'Guides'], ['/about/', 'About']];
 
@@ -289,6 +290,58 @@ ${table(['Interest rate', 'Monthly repayment', 'Compared with 6%', 'Total intere
     faq: [
       ['How much does a 0.25% rate rise add to repayments?', `On a ${money(600000)}, 30-year loan at around 6%, about ${money(minOf({ rate: 6.25 }) - M0, 0)} a month. Scale it by your loan size: roughly ${money((minOf({ rate: 6.25 }) - M0) / 6, 0)} a month per ${money(100000)} borrowed.`],
       ['Should I keep my repayments the same when rates fall?', 'If your budget allows, it\'s one of the easiest ways to pay a loan off faster: the difference goes straight to the balance. If you have more expensive debts, paying those off first usually saves more.'],
+    ],
+  });
+}
+
+// Offset vs redraw
+{
+  // An offset loan is "done" once the offset balance could clear what's owed.
+  const offsetDone = (amt) => { const r = simulate({ ...base, repayment: M0, offset: amt }); const p = r.points.find(([, b]) => b <= amt) || r.points[r.points.length - 1];
+    // interest up to that point
+    const r2 = simulate({ ...base, repayment: M0, offset: amt, maxYears: p[0] + 1e-6 });
+    return { days: p[0] * 365, interest: r2.totalInterest }; };
+  const none = S0;
+  const rows = [10000, 20000, 50000].flatMap(amt => {
+    const o = offsetDone(amt), d = sim({ principal: 600000 - amt }, M0);
+    return [
+      [`${money(amt)} in offset`, duration(o.days), money(o.interest), `${duration(none.days - o.days)} · ${money(none.totalInterest - o.interest)}`],
+      [`${money(amt)} paid in (redraw)`, duration(d.days), money(d.totalInterest), `${duration(none.days - d.days)} · ${money(none.totalInterest - d.totalInterest)}`],
+    ];
+  });
+  const yearSave = [5000, 10000, 20000, 50000].map(a => [money(a), money(a * 0.06, 0), money(a * 0.06 / 12, 0)]);
+  page({
+    path: '/offset-vs-redraw/', h1: 'Offset vs redraw: which is better?', crumbs: [['/guides/', 'Guides']],
+    title: `Offset Account vs Redraw: Which Saves More on Your Home Loan? | ${SITE_NAME}`,
+    description: 'Offset account or redraw? Worked Australian examples showing the interest each saves, the real differences in access, fees and tax, and when an offset is worth paying for.',
+    body: `<p class="lede">Both let your savings cut the interest on your home loan. They save the same amount of interest; where they differ is how easily you can get your money back, and what you pay for the privilege.</p>
+<h2>How each one works</h2>
+<p><strong>Redraw:</strong> you pay extra money into the loan itself. The balance drops, so less interest is charged, and you can take ("redraw") the extra back out later.
+  <strong>Offset:</strong> your money sits in a transaction account linked to the loan. It stays a separate balance, but the lender charges interest only on the loan
+  balance <em>minus</em> what's in the offset. ${money(20000)} in offset against a ${money(600000)} loan means interest on ${money(580000)}.</p>
+<h2>Which saves more interest?</h2>
+<p>Neither: the same amount saves the same interest. Here's ${money(10000)}, ${money(20000)} and ${money(50000)} kept in offset for the life of the loan, compared with paying it in as an extra repayment and leaving it there:</p>
+${table(['Savings', 'Loan finished in', 'Total interest', 'Time and interest saved'], rows, 'Offset compared with redraw')}
+<p class="hint">${money(600000)} loan, 6% p.a., 30 years, minimum monthly repayments of ${money(M0, 0)} unchanged. The offset loan counts as finished once the offset balance could pay out what's left.</p>
+<p>The figures match because in both cases the same amount of money stops being charged interest. So the decision comes down to the differences below.</p>
+<h2>The differences that matter</h2>
+<ul>
+<li><strong>Getting your money back.</strong> Offset money is in an everyday account: card, transfers, salary paid in. Redraw usually means a request through online banking, and some lenders set minimum amounts, charge fees, or can limit redraw in some circumstances.</li>
+<li><strong>Fees.</strong> Offset accounts often come with "package" loans that charge an annual fee, or with a slightly higher rate. Redraw is usually free on basic variable loans.</li>
+<li><strong>Fixed rates.</strong> Many fixed-rate loans don't offer a full offset and cap extra repayments, so neither works as well while the rate is fixed.</li>
+<li><strong>If you might rent the home out later.</strong> Money in offset stays your savings. Money redrawn from a loan is new borrowing, and what it's used for can affect what interest is tax-deductible. If you might turn the home into an investment property, ask an accountant before choosing redraw.</li>
+<li><strong>Habits.</strong> Money in an offset is easy to spend. Some people find that money tucked into the loan, slightly harder to get at, is more likely to stay there.</li>
+</ul>
+<h2>Is an offset account worth its fee?</h2>
+<p>The interest an offset saves in a year is roughly the balance you keep in it times your rate. At 6%:</p>
+${table(['Average offset balance', 'Interest saved a year', 'A month'], yearSave, 'Interest saved by an offset balance')}
+<p>Compare that with the extra cost of the loan that has the offset: its annual fee, plus any difference in rate. If you'd only keep a few thousand dollars there, redraw on a cheaper loan can come out ahead. If your pay goes into the offset and you hold a healthy buffer, the offset usually wins on convenience as well.</p>
+<p>Try it with your own loan: the ${calcLink({ loan: 600000, rate: 6, extra: 0 }, 'calculator')} has a redraw option that shows what taking money back out does to your loan.</p>
+<h2>More guides</h2>${tiles('/offset-vs-redraw/')}`,
+    faq: [
+      ['Is an offset account better than redraw?', 'They save exactly the same interest for the same amount of money. An offset is easier to use day to day and keeps savings separate, which can matter for tax if the home later becomes an investment. Redraw is often available on cheaper loans with no package fee. The better choice depends on how much you\'d keep in it and what the offset costs.'],
+      ['Does money in an offset reduce my repayments?', 'Usually not. Most lenders keep the repayment the same, so less of each repayment goes to interest and more goes off the balance, and the loan finishes earlier.'],
+      ['Can I have more than one offset account?', 'Some lenders allow several offset accounts against one loan, for example separate accounts for bills and savings. All their balances count towards reducing the interest.'],
     ],
   });
 }

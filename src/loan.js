@@ -19,7 +19,7 @@ const EPS = 1e-9;
  *            points:Array<[number, number]>, years:Array<{year:number, interest:number, paid:number, balance:number}> }}
  * points: [years, balance] after every repayment (starts at [0, principal]).
  */
-export function simulate({ principal, rate, pay = 'monthly', charge = 'monthly', repayment, extra = 0, redrawAt = 0, redrawAmount = 0, maxYears = 60, record = true }) {
+export function simulate({ principal, rate, pay = 'monthly', charge = 'monthly', repayment, extra = 0, redrawAt = 0, redrawAmount = 0, offset = 0, maxYears = 60, record = true }) {
   const np = PAY_FREQS[pay], nc = CHARGE_FREQS[charge];
   const dp = DAYS / np, dc = DAYS / nc, di = rate / 100 / DAYS;
   const amount = repayment + extra;
@@ -33,7 +33,7 @@ export function simulate({ principal, rate, pay = 'monthly', charge = 'monthly',
   while (bal > EPS) {
     const tp = kp * dp, tc = kc * dc, next = Math.min(tp, tc, rdPending ? tr : Infinity);
     if (next > limit) return finish(false);
-    accrued += bal * di * (next - t);
+    accrued += Math.max(0, bal - offset) * di * (next - t); // money in an offset account isn't charged interest
     t = next;
     // close off calendar years for the yearly table
     while (record && t > yr.year * DAYS + EPS) { yr.balance = bal; years.push(yr); yr = { year: yr.year + 1, interest: 0, paid: 0, balance: bal }; }
