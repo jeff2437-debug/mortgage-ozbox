@@ -120,7 +120,8 @@ ${calcCard()}
 <h2>What the calculator shows</h2>
 <p>Enter your loan amount, interest rate and term. The calculator works out the <strong>minimum repayment</strong> that clears the loan in that time,
   or you can enter the amount you actually pay. Add an <strong>extra repayment</strong> and the graph shows both balances side by side: the orange line
-  is the loan on minimum repayments, the blue line is the loan with your extra payments. The gap between where the two lines hit zero is the time you save.</p>
+  is the loan on minimum repayments, the blue line is the loan with your extra payments. The gap between where the two lines hit zero is the time you save.
+  Add a <strong>redraw</strong> and a purple line shows the loan jumping back up when you take the money out, and how much later it then finishes.</p>
 <p>For example, on a ${money(600000)} loan at 6% over 30 years, the minimum monthly repayment is about ${money(M0, 0)}. Paying an extra ${money(250)}
   a month clears it in ${duration(e250.days)} instead of 30 years and saves about <strong>${money(S0.totalInterest - e250.totalInterest)}</strong> in interest.</p>
 <h2>Why small extra repayments make such a difference</h2>
