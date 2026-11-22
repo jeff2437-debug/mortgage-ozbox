@@ -20,8 +20,8 @@ h3{font-size:1.05rem;margin:1.2rem 0 .3rem}
 .lede{font-size:1.1rem;color:var(--muted);max-width:46rem}
 .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:1.1rem;margin:1.2rem 0}
 /* calculator */
-#calc{min-height:1160px}
-@media(max-width:620px){#calc{min-height:1660px}}
+#calc{min-height:1250px}
+@media(max-width:620px){#calc{min-height:1800px}}
 .inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:.8rem 1rem;margin:0 0 1rem}
 .inputs label,.inputs legend{display:flex;flex-direction:column;gap:.25rem;font-size:.92rem;color:var(--muted);font-weight:600}
 .field{display:flex;align-items:center;border:1px solid #b9cbc7;border-radius:8px;background:#fff;overflow:hidden}
@@ -37,7 +37,7 @@ input[type=radio]{accent-color:var(--accent);width:1.1rem;height:1.1rem}
 .inputs label.extra{grid-column:1/-1;max-width:420px}
 .field.small.yrs{width:7.5rem}
 .inputs .hint.full{grid-column:1/-1;margin:0}
-fieldset.redraw small.hint{display:block;margin-top:.2rem}
+fieldset.redraw small.hint,fieldset.offset small.hint{display:block;margin-top:.2rem}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:.6rem;margin:.4rem 0}
 .stat{background:#fff;border:1px solid var(--line);border-top:4px solid #9bb3ae;border-radius:10px;padding:.55rem .8rem}
 .stat.good{border-top-color:var(--accent)}

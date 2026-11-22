@@ -122,7 +122,7 @@ ${calcCard()}
 <p>Enter your loan amount, interest rate and term. The calculator works out the <strong>minimum repayment</strong> that clears the loan in that time,
   or you can enter the amount you actually pay. Add an <strong>extra repayment</strong> and the graph shows both balances side by side: the orange line
   is the loan on minimum repayments, the blue line is the loan with your extra payments. The gap between where the two lines hit zero is the time you save.
-  Add a <strong>redraw</strong> and a purple line shows the loan jumping back up when you take the money out, and how much later it then finishes.</p>
+  Enter an <strong>offset</strong> balance to see how much your savings cut the loan. Add a <strong>redraw</strong> and a purple line shows the loan jumping back up when you take the money out, and how much later it then finishes.</p>
 <p>For example, on a ${money(600000)} loan at 6% over 30 years, the minimum monthly repayment is about ${money(M0, 0)}. Paying an extra ${money(250)}
   a month clears it in ${duration(e250.days)} instead of 30 years and saves about <strong>${money(S0.totalInterest - e250.totalInterest)}</strong> in interest.</p>
 <h2>Why small extra repayments make such a difference</h2>
@@ -336,7 +336,7 @@ ${table(['Savings', 'Loan finished in', 'Total interest', 'Time and interest sav
 <p>The interest an offset saves in a year is roughly the balance you keep in it times your rate. At 6%:</p>
 ${table(['Average offset balance', 'Interest saved a year', 'A month'], yearSave, 'Interest saved by an offset balance')}
 <p>Compare that with the extra cost of the loan that has the offset: its annual fee, plus any difference in rate. If you'd only keep a few thousand dollars there, redraw on a cheaper loan can come out ahead. If your pay goes into the offset and you hold a healthy buffer, the offset usually wins on convenience as well.</p>
-<p>Try it with your own loan: the ${calcLink({ loan: 600000, rate: 6, extra: 0 }, 'calculator')} has a redraw option that shows what taking money back out does to your loan.</p>
+<p>Try it with your own loan: the ${calcLink({ loan: 600000, rate: 6, extra: 0, offset: 20000 }, 'calculator')} has an offset field, and a redraw option that shows what taking money back out does to your loan.</p>
 <h2>More guides</h2>${tiles('/offset-vs-redraw/')}`,
     faq: [
       ['Is an offset account better than redraw?', 'They save exactly the same interest for the same amount of money. An offset is easier to use day to day and keeps savings separate, which can matter for tax if the home later becomes an investment. Redraw is often available on cheaper loans with no package fee. The better choice depends on how much you\'d keep in it and what the offset costs.'],

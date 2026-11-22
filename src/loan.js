@@ -56,6 +56,13 @@ export function simulate({ principal, rate, pay = 'monthly', charge = 'monthly',
       }
       bal -= amount; totalPaid += amount; yr.paid += amount;
       if (record) points.push([t / DAYS, bal]);
+      if (offset > 0 && bal + accrued <= offset) {
+        // the offset balance now covers what's owed: treat the loan as paid out from the offset
+        const last = bal + accrued; totalInterest += accrued; yr.interest += accrued;
+        totalPaid += last; yr.paid += last; bal = 0; accrued = 0;
+        if (record) points.push([t / DAYS, 0]);
+        break;
+      }
     }
   }
   return finish(true);

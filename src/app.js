@@ -19,6 +19,7 @@ function init(box) {
     own: num('repay', 0),
     extra: num('extra', box.dataset.extra != null ? +box.dataset.extra : 200),
     ahead: num('ahead', 0),
+    offset: num('offset', 0),
     rdAmt: num('redraw', 0),
     rdAt: num('redrawAt', 5),
   };
@@ -37,6 +38,10 @@ function init(box) {
       <span class="field small"><i>$</i><input id="f-own" type="number" inputmode="decimal" min="0" step="10" aria-label="Your regular repayment" value="${st.own || ''}"></span></label>
   </fieldset>
   <label class="extra"><span>Extra repayment each <span id="o-per">month</span></span> <span class="field"><i>$</i><input id="f-extra" type="number" inputmode="decimal" min="0" step="10" value="${st.extra}"></span></label>
+  <fieldset class="repay offset"><legend>Offset account (optional)</legend>
+    <label class="radio">Balance kept in offset <span class="field small"><i>$</i><input id="f-offset" type="number" inputmode="decimal" min="0" step="1000" aria-label="Offset account balance" value="${st.offset || ''}" placeholder="0"></span></label>
+    <small class="hint">Money in an offset account isn't charged interest. The calculator assumes the balance stays about the same, and treats the loan as finished once the offset could pay out what's left.</small>
+  </fieldset>
   <fieldset class="repay redraw"><legend>Redraw (optional)</legend>
     <label class="radio">Already ahead (available to redraw now) <span class="field small"><i>$</i><input id="f-ahead" type="number" inputmode="decimal" min="0" step="1000" aria-label="Amount already available to redraw" value="${st.ahead || ''}" placeholder="0"></span></label>
     <label class="radio">Take out <span class="field small"><i>$</i><input id="f-rdamt" type="number" inputmode="decimal" min="0" step="1000" aria-label="Amount to redraw" value="${st.rdAmt || ''}" placeholder="0"></span>
@@ -75,6 +80,7 @@ function init(box) {
     st.own = Math.max(0, f('#f-own') || 0);
     st.extra = Math.max(0, f('#f-extra') || 0);
     st.ahead = Math.max(0, f('#f-ahead') || 0);
+    st.offset = Math.max(0, f('#f-offset') || 0);
     st.rdAmt = Math.max(0, f('#f-rdamt') || 0);
     st.rdAt = Math.min(40, Math.max(0, f('#f-rdat') || 0));
     run();
@@ -89,12 +95,13 @@ function init(box) {
     if (!$('#f-own').value) $('#f-own').placeholder = min.toFixed(0);
     const base = st.mode === 'own' && st.own > 0 ? st.own : min;
     const stats = $('#o-stats'), msg = $('#o-msg');
-    $('#o-link').href = '?' + new URLSearchParams({ loan: st.principal, rate: st.rate, years: st.years, pay: st.pay, charge: st.charge, extra: st.extra, ...(st.mode === 'own' && st.own ? { repay: st.own } : {}), ...(st.ahead ? { ahead: st.ahead } : {}), ...(st.rdAmt ? { redraw: st.rdAmt, redrawAt: st.rdAt } : {}) });
+    $('#o-link').href = '?' + new URLSearchParams({ loan: st.principal, rate: st.rate, years: st.years, pay: st.pay, charge: st.charge, extra: st.extra, ...(st.mode === 'own' && st.own ? { repay: st.own } : {}), ...(st.ahead ? { ahead: st.ahead } : {}), ...(st.offset ? { offset: st.offset } : {}), ...(st.rdAmt ? { redraw: st.rdAmt, redrawAt: st.rdAt } : {}) });
     if (!st.principal) { $('#o-rd').hidden = true; stats.innerHTML = ''; msg.textContent = 'Enter a loan amount to start.'; chart.update([]); $('#o-table').innerHTML = ''; return; }
 
-    const a = simulate({ ...st, repayment: base, extra: 0 });
-    const b = st.extra > 0 ? simulate({ ...st, repayment: base, extra: st.extra }) : null;
-    const plan = b || a; // your plan without any redraw
+    // a: just the regular repayment. b: your plan (extra repayments and/or offset). plan: b or a, before any redraw.
+    const a = simulate({ ...st, offset: 0, repayment: base, extra: 0 });
+    const b = st.extra > 0 || st.offset > 0 ? simulate({ ...st, repayment: base, extra: st.extra }) : null;
+    const plan = b || a;
     const interest1 = firstPeriodInterest(st);
     if (!plan.repaid) {
       $('#o-rd').hidden = true;
@@ -112,7 +119,7 @@ function init(box) {
     let c = null, rdNote = '';
     if (st.rdAmt > 0) {
       const when = st.rdAt > 0 ? `after ${st.rdAt} year${st.rdAt === 1 ? '' : 's'}` : 'now';
-      const sched = simulate({ ...st, principal: st.principal + st.ahead, repayment: min, extra: 0 });
+      const sched = simulate({ ...st, offset: 0, principal: st.principal + st.ahead, repayment: min, extra: 0 });
       if (st.rdAt * 365 >= plan.days) rdNote = `The loan is already paid off before year ${st.rdAt}, so there's nothing to redraw then.`;
       else {
         const avail = Math.max(0, Math.floor(balanceAt(sched.points, st.rdAt) - balanceAt(plan.points, st.rdAt)));
@@ -155,14 +162,23 @@ ${row('Repayment', money(base + st.extra, 2), money(base + st.extra, 2), 'same')
       rdBox.hidden = false;
     } else { rdBox.hidden = true; rdBox.innerHTML = ''; }
     let text = '';
-    if (b && !a.repaid) text = `Without the extra ${money(st.extra, 2)}, ${money(base, 2)} a ${per} would never clear this loan.`;
-    else if (b) text = `Adding ${money(st.extra, 2)} a ${per} cuts ${duration(a.days - b.days)} off the loan and saves ${money(a.totalInterest - b.totalInterest)} in interest.`;
+    const what = [st.extra > 0 ? `adding ${money(st.extra, 2)} a ${per}` : '', st.offset > 0 ? `keeping ${money(st.offset)} in your offset` : ''].filter(Boolean).join(' and ');
+    const What = what.charAt(0).toUpperCase() + what.slice(1);
+    if (b && !a.repaid) text = `Without ${what}, ${money(base, 2)} a ${per} would never clear this loan.`;
+    else if (b) {
+      text = `${What} cuts ${duration(a.days - b.days)} off the loan and saves ${money(a.totalInterest - b.totalInterest)} in interest.`;
+      if (st.offset > 0 && st.extra > 0) {
+        const noOff = simulate({ ...st, offset: 0, repayment: base, extra: st.extra });
+        if (noOff.repaid) text += ` The offset's share: ${duration(Math.max(0, noOff.days - b.days))} and ${money(noOff.totalInterest - b.totalInterest)}.`;
+      }
+      if (st.offset > 0) text += ` In the first year alone, the offset saves about ${money(Math.min(st.offset, st.principal) * st.rate / 100, 0)} in interest.`;
+    }
     msg.textContent = [text, rdNote].filter(Boolean).join(' ');
 
     const series = [];
-    if (b || c) series.push({ pts: a.points, color: '#c2410c', name: st.mode === 'own' ? (b ? 'Without extra' : 'Without redraw') : 'Minimum repayments' });
-    if (b) series.push({ pts: b.points, color: '#1d5fc4', name: `With ${money(st.extra, 0)} extra`, dash: !!c });
-    if (c) series.push({ pts: c.points, color: '#7c3aed', name: `${b ? 'Extra and' : 'With'} ${money(c.redrawn)} redraw` });
+    if (b || c) series.push({ pts: a.points, color: '#c2410c', name: st.mode === 'own' ? 'Your repayment only' : 'Minimum repayments' });
+    if (b) series.push({ pts: b.points, color: '#1d5fc4', name: st.extra > 0 && st.offset > 0 ? 'With extra and offset' : st.extra > 0 ? `With ${money(st.extra, 0)} extra` : `With ${money(st.offset, 0)} offset`, dash: !!c });
+    if (c) series.push({ pts: c.points, color: '#7c3aed', name: `${b ? 'Plus' : 'With'} ${money(c.redrawn)} redraw` });
     if (!series.length) series.push({ pts: a.points, color: '#1d5fc4', name: 'Loan balance' });
     // fit the x-axis to the last payoff (rounded up to a whole year) so the lines end near the right edge
     chart.update(series, Math.max(1, Math.ceil(Math.max(...series.map(s => s.pts[s.pts.length - 1][0])) - 1e-6)));
