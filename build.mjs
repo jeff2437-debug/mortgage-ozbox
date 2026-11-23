@@ -33,6 +33,8 @@ const GUIDES = [
   ['/pay-off-mortgage-in-10-15-or-20-years/', 'Pay off your mortgage in 10, 15 or 20 years', 'The repayment it takes to be debt-free sooner, and the interest it saves.'],
   ['/25-vs-30-year-home-loan/', '25 vs 30-year home loan', 'The real cost of the longer term, and a way to get the best of both.'],
   ['/refinancing-break-even/', 'Refinancing break-even', 'How quickly a lower rate pays back the cost of switching lenders.'],
+  ['/interest-only-vs-principal-and-interest/', 'Interest-only vs principal and interest', 'What an interest-only period really costs, and the jump when it ends.'],
+  ['/lvr-and-lenders-mortgage-insurance/', 'LVR and lenders mortgage insurance', 'Why a 20% deposit matters, what LMI costs, and how to avoid it.'],
 ];
 const NAV = [['/', 'Calculator'], ['/guides/', 'Guides'], ['/about/', 'About']];
 
@@ -489,6 +491,101 @@ ${table(['Rate change', 'Repayment falls by', `Break-even: ${money(1000)} costs`
       ['How do I work out the break-even point for refinancing?', 'Add up everything switching costs (discharge, government, application and any break fees, minus any cashback), then divide by how much your repayment falls each month. The answer is the number of months until switching has paid for itself.'],
       ['Is it worth refinancing for 0.25%?', `Often, yes. On ${money(bal)} with ${yrs} years left, a 0.25% cut lowers the repayment by about ${money(mOld - minOf({ ...cur, rate: 5.95 }), 0)} a month, so ${money(1000)} of switching costs is paid back within about ${Math.ceil(1000 / (mOld - minOf({ ...cur, rate: 5.95 })))} months. It's less worthwhile if you're leaving a fixed rate with break costs, or if you'd have to pay lenders mortgage insurance again.`],
       ['Should I ask my bank for a lower rate before refinancing?', 'Yes. Lenders often match or beat a competing rate to keep an existing customer, and that saves you the switching costs entirely.'],
+    ],
+  });
+}
+
+// Interest-only vs P&I
+{
+  const P = 600000, ioYears = 5, piRate = 6, ioRate = 6.6;
+  const scen = (ioR) => {
+    const ioPay = P * ioR / 100 / 12, ioInt = P * ioR / 100 * ioYears;
+    const after = minOf({ principal: P, years: 30 - ioYears, rate: piRate }), s = sim({ principal: P, years: 30 - ioYears, rate: piRate }, after);
+    return { ioPay, ioInt, after, total: ioInt + s.totalInterest };
+  };
+  const same = scen(piRate), prem = scen(ioRate);
+  const rows = [
+    ['Principal and interest, 30 years', money(M0, 0), '–', money(S0.totalInterest), money(P)],
+    [`Interest-only 5 years at ${piRate}%, then P&I`, money(same.ioPay, 0), money(same.after, 0), money(same.total), money(P)],
+    [`Interest-only 5 years at ${ioRate}%, then P&I`, money(prem.ioPay, 0), money(prem.after, 0), money(prem.total), money(P)],
+  ];
+  const bal5 = simulate({ ...base, principal: P, repayment: M0, extra: 0, record: true }).years[4].balance;
+  page({
+    path: '/interest-only-vs-principal-and-interest/', h1: 'Interest-only vs principal and interest', crumbs: [['/guides/', 'Guides']],
+    title: `Interest-Only vs Principal and Interest Home Loan: The Real Cost | ${SITE_NAME}`,
+    description: 'What an interest-only period on an Australian home loan really costs: lower repayments now, a repayment jump when it ends, and tens of thousands more interest.',
+    body: `<p class="lede">Interest-only repayments are lower at first because you're not paying down the loan. Here's what that costs over the life of the loan, and the repayment shock when the interest-only period ends.</p>
+<h2>On a ${money(P)} loan</h2>
+${table(['Repayment type', 'Monthly repayment, first 5 years', 'Monthly repayment after', 'Total interest', 'Still owed after 5 years'], rows.map((r, i) => i === 0 ? [r[0], r[1], money(M0, 0), r[3], money(bal5)] : r), 'Interest-only compared with principal and interest')}
+<p class="hint">${money(P)} over 30 years, monthly repayments. Principal and interest at ${piRate}% p.a. throughout; after the interest-only period the loan reverts to ${piRate}% principal and interest over the remaining 25 years. Interest-only interest is shown at the same rate and at ${ioRate}%, since interest-only rates are usually higher.</p>
+<h2>What you give up</h2>
+<p>For five years the interest-only loan is about ${money(M0 - same.ioPay, 0)} a month cheaper. But after five years of principal and interest you'd owe ${money(bal5)}, while the interest-only borrower still owes the full ${money(P)}.
+  Then the interest-only repayment jumps to ${money(same.after, 0)}, about ${money(same.after - M0, 0)} a month <em>more</em> than the principal and interest borrower has been paying all along, because the whole loan now has to be cleared in 25 years.</p>
+<p>Over the life of the loan the interest-only period adds about <strong>${money(same.total - S0.totalInterest)}</strong> in interest at the same rate, or <strong>${money(prem.total - S0.totalInterest)}</strong> if the interest-only rate is ${(ioRate - piRate).toFixed(1)}% higher.</p>
+<h2>Interest-only rates are higher</h2>
+<p>Lenders usually charge more for interest-only loans, and for owner-occupiers the interest-only period is typically limited to about five years. Investors can often get longer. Check the rate that applies during and after the interest-only period, and whether the loan reverts automatically.</p>
+<h2>When interest-only can make sense</h2>
+<ul>
+<li><strong>Investment property.</strong> Interest on an investment loan is generally tax-deductible, so investors with a home loan as well often prefer to pay down the non-deductible home loan first. Get tax advice for your situation.</li>
+<li><strong>A short, known squeeze.</strong> Parental leave, a building project or a temporary drop in income, with a clear end date.</li>
+<li><strong>With an offset account.</strong> Interest-only repayments while you build savings in an offset account cut the interest by the same amount as paying down the loan, and keep the money available. It only works if you actually save the difference.</li>
+</ul>
+<h2>A middle path</h2>
+<p>If the goal is just lower repayments, a principal and interest loan over a longer term, or a 30-year loan with an offset account, usually costs less than an interest-only period. ${calcLink({ loan: P, rate: piRate, years: 30 }, 'Compare options in the calculator')}, or see <a href="/25-vs-30-year-home-loan/">25 vs 30 years</a> and <a href="/offset-vs-redraw/">offset vs redraw</a>.</p>
+<h2>More guides</h2>${tiles('/interest-only-vs-principal-and-interest/')}`,
+    faq: [
+      ['How much more interest does an interest-only loan cost?', `On ${money(P)} at ${piRate}%, a five-year interest-only period adds about ${money(same.total - S0.totalInterest)} in interest over a 30-year loan, and more if the interest-only rate is higher. The longer the interest-only period, the bigger the cost.`],
+      ['What happens when an interest-only period ends?', `The loan switches to principal and interest over the remaining term, so repayments rise sharply. On ${money(P)} at ${piRate}%, they'd go from about ${money(same.ioPay, 0)} to ${money(same.after, 0)} a month.`],
+      ['Can I make extra repayments on an interest-only loan?', 'Usually, yes, on variable loans. Extra repayments or money in an offset account reduce the interest the same way as on any other loan. Fixed-rate interest-only loans may limit extra repayments.'],
+    ],
+  });
+}
+
+// LVR and LMI
+{
+  const price = 600000;
+  const lvrs = [80, 85, 90, 95];
+  const rows = lvrs.map(l => { const loan = price * l / 100, m = minOf({ principal: loan }), s = sim({ principal: loan }, m); return [`${100 - l}% (${money(price * (100 - l) / 100)})`, money(loan), `${l}%`, money(m, 0), money(s.totalInterest), l > 80 ? 'Usually' : 'No']; });
+  const l80 = minOf({ principal: price * 0.8 }), l95 = minOf({ principal: price * 0.95 });
+  const i80 = sim({ principal: price * 0.8 }, l80).totalInterest, i95 = sim({ principal: price * 0.95 }, l95).totalInterest;
+  const lmiAdd = 15000, mAdd = minOf({ principal: price * 0.95 + lmiAdd }), iAdd = sim({ principal: price * 0.95 + lmiAdd }, mAdd).totalInterest;
+  page({
+    path: '/lvr-and-lenders-mortgage-insurance/', h1: 'LVR and lenders mortgage insurance (LMI) explained', crumbs: [['/guides/', 'Guides']],
+    title: `LVR and Lenders Mortgage Insurance: What a Small Deposit Costs | ${SITE_NAME}`,
+    description: 'What loan-to-value ratio (LVR) means, why a 20% deposit avoids lenders mortgage insurance, what LMI typically costs at 85%, 90% and 95% LVR, and ways to avoid it.',
+    body: `<p class="lede">The size of your deposit sets your loan-to-value ratio, or LVR. Above 80%, most lenders add lenders mortgage insurance, and a bigger loan costs more interest too.</p>
+<h2>What LVR means</h2>
+<p>LVR is the loan divided by the property's value. Borrow ${money(540000)} to buy a ${money(price)} home and your LVR is 90%. Lenders treat 80% as the line: at or below it you're a standard borrower; above it, you usually pay LMI.</p>
+<h2>Deposit, LVR and repayments on a ${money(price)} home</h2>
+${table(['Deposit', 'Loan', 'LVR', 'Monthly repayment', 'Total interest', 'LMI?'], rows, 'Loan size by deposit on a $600,000 home')}
+<p class="hint">6% p.a., 30 years, monthly repayments. Excludes LMI, stamp duty and other purchase costs.</p>
+<p>Going from a 20% to a 5% deposit means borrowing ${money(price * 0.15)} more, which adds about ${money(l95 - l80, 0)} a month and ${money(i95 - i80)} in interest over 30 years, before any LMI.</p>
+<h2>What LMI costs</h2>
+<p>LMI is a one-off premium that protects the <em>lender</em>, not you, if you default and the sale doesn't cover the debt. It depends on the lender, the insurer, the loan size and especially the LVR. Published estimates for a ${money(500000)} home are roughly:</p>
+<ul>
+<li><strong>85% LVR:</strong> about $4,700 to $6,300</li>
+<li><strong>90% LVR:</strong> about $8,700 to $14,200</li>
+<li><strong>95% LVR:</strong> about $14,900 to $17,000</li>
+</ul>
+<p class="hint">Ranges from estimates published by Australian comparison sites in 2025–26. Your lender's quote is what counts.</p>
+<p>Most lenders let you add LMI to the loan instead of paying it up front. That's easier on savings, but you then pay interest on it: adding ${money(lmiAdd)} to the 95% loan above raises the total interest from ${money(i95)} to ${money(iAdd)}.</p>
+<h2>Ways to avoid LMI</h2>
+<ul>
+<li><strong>The Australian Government 5% Deposit Scheme.</strong> Since 1 October 2025, eligible first home buyers can buy with a 5% deposit (single parents 2%) and no LMI, with no income caps or limits on places. Property price caps apply and vary by area; in Queensland it's $1,000,000 in the metro area. Check the postcode tool at firsthomebuyers.gov.au.</li>
+<li><strong>A family guarantee.</strong> A parent uses equity in their home as extra security. They take on real risk if you can't pay, so it needs careful thought and legal advice.</li>
+<li><strong>Professional waivers.</strong> Some lenders waive LMI up to about 90% LVR for certain professions, such as doctors and lawyers.</li>
+<li><strong>Save to 20%,</strong> or buy a cheaper property so your deposit reaches 20%.</li>
+</ul>
+<h2>Paying LMI isn't always a mistake</h2>
+<p>If prices rise faster than you can save, paying LMI to buy sooner can cost less than waiting. If they don't, it's money you didn't need to spend. Nobody knows which way prices will go, so compare the LMI quote with how long saving the rest would take.</p>
+<h2>Refinancing above 80%</h2>
+<p>LMI usually isn't transferable. If you refinance while you still owe more than 80% of the home's value, you may have to pay it again, so check your LVR first. See <a href="/refinancing-break-even/">refinancing break-even</a>.</p>
+<h2>More guides</h2>${tiles('/lvr-and-lenders-mortgage-insurance/')}`,
+    faq: [
+      ['What is a good LVR?', '80% or below avoids LMI with most lenders and often gets a slightly lower interest rate. Many lenders offer their best rates at 60% or 70% LVR or below.'],
+      ['How much is LMI on a 10% deposit?', 'For a $500,000 home, published estimates range from about $8,700 to $14,200, depending on the lender and insurer. Ask your lender for a quote, since premiums vary widely.'],
+      ['Can I avoid LMI with a 5% deposit?', 'Yes, if you\'re an eligible first home buyer using the Australian Government 5% Deposit Scheme and the property is under the price cap for its area. Single parents and legal guardians can buy with a 2% deposit.'],
+      ['Does LMI protect me?', 'No. It protects the lender if you default and the property sells for less than the debt. The insurer can still pursue you for the shortfall.'],
     ],
   });
 }
