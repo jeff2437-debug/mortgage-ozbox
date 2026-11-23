@@ -30,6 +30,9 @@ const GUIDES = [
   ['/how-home-loan-interest-is-calculated/', 'How home loan interest is calculated', 'Daily interest, monthly charging, and why the frequency matters a little.'],
   ['/interest-rate-changes/', 'What a rate rise or cut does', 'Repayments at every rate from 4.5% to 8%, and the trick to use after a cut.'],
   ['/offset-vs-redraw/', 'Offset vs redraw', 'Which saves more, the real differences, and when an offset account is worth its fee.'],
+  ['/pay-off-mortgage-in-10-15-or-20-years/', 'Pay off your mortgage in 10, 15 or 20 years', 'The repayment it takes to be debt-free sooner, and the interest it saves.'],
+  ['/25-vs-30-year-home-loan/', '25 vs 30-year home loan', 'The real cost of the longer term, and a way to get the best of both.'],
+  ['/refinancing-break-even/', 'Refinancing break-even', 'How quickly a lower rate pays back the cost of switching lenders.'],
 ];
 const NAV = [['/', 'Calculator'], ['/guides/', 'Guides'], ['/about/', 'About']];
 
@@ -151,7 +154,7 @@ ${tiles()}`,
 });
 
 /* ---------- guides ---------- */
-page({ path: '/guides/', h1: 'Home loan guides', title: `Home Loan Guides | ${SITE_NAME}`, description: 'Plain-English guides to extra repayments, repayment frequency, how interest is calculated and what rate changes do, with worked Australian examples.',
+page({ path: '/guides/', h1: 'Home loan guides', title: `Home Loan Guides | ${SITE_NAME}`, description: 'Plain-English guides to extra repayments, repayment frequency, loan terms, offset and redraw, refinancing and rate changes, with worked Australian examples.',
   body: `<p class="lede">Worked examples for the questions people ask most about paying off a home loan. Every figure is calculated with the same engine as the <a href="/">calculator</a>.</p>${tiles()}` });
 
 // Extra repayments
@@ -342,6 +345,150 @@ ${table(['Average offset balance', 'Interest saved a year', 'A month'], yearSave
       ['Is an offset account better than redraw?', 'They save exactly the same interest for the same amount of money. An offset is easier to use day to day and keeps savings separate, which can matter for tax if the home later becomes an investment. Redraw is often available on cheaper loans with no package fee. The better choice depends on how much you\'d keep in it and what the offset costs.'],
       ['Does money in an offset reduce my repayments?', 'Usually not. Most lenders keep the repayment the same, so less of each repayment goes to interest and more goes off the balance, and the loan finishes earlier.'],
       ['Can I have more than one offset account?', 'Some lenders allow several offset accounts against one loan, for example separate accounts for bills and savings. All their balances count towards reducing the interest.'],
+    ],
+  });
+}
+
+// Pay off in 10, 15 or 20 years
+{
+  const terms = [10, 15, 20, 25, 30];
+  const termRows = principal => {
+    const m30 = minOf({ principal }), s30 = sim({ principal }, m30);
+    return terms.map(y => {
+      const m = minOf({ principal, years: y }), s = sim({ principal, years: y }, m);
+      return [`${y} years`, money(m, 0), y === 30 ? '–' : `+${money(m - m30, 0)}`, money(s.totalInterest), y === 30 ? '–' : money(s30.totalInterest - s.totalInterest)];
+    });
+  };
+  const HEAD = ['Paid off in', 'Monthly repayment', 'More than 30-year minimum', 'Total interest', 'Interest saved'];
+  const m10 = minOf({ years: 10 }), m15 = minOf({ years: 15 }), m20 = minOf({ years: 20 });
+  const s15 = sim({ years: 15 }, m15);
+  const rateRows = [5, 6, 7].map(r => [`${r}%`, ...[10, 15, 20].map(y => money(minOf({ rate: r, years: y }), 0))]);
+  page({
+    path: '/pay-off-mortgage-in-10-15-or-20-years/', h1: 'How to pay off your mortgage in 10, 15 or 20 years', crumbs: [['/guides/', 'Guides']],
+    title: `Pay Off Your Mortgage in 10, 15 or 20 Years: Repayments Needed | ${SITE_NAME}`,
+    description: 'The monthly repayment needed to pay off a $400k, $600k or $800k Australian home loan in 10, 15, 20, 25 or 30 years, and how much interest each saves.',
+    body: `<p class="lede">Most home loans are written for 30 years, but you don't have to take that long. Here's what it costs each month to be mortgage-free sooner, and what it saves.</p>
+<h2>On a ${money(600000)} loan</h2>
+${table(HEAD, termRows(600000), 'Repayments to pay off $600,000 in 10 to 30 years')}
+<h2>On a ${money(400000)} loan</h2>
+${table(HEAD, termRows(400000), 'Repayments to pay off $400,000 in 10 to 30 years')}
+<h2>On an ${money(800000)} loan</h2>
+${table(HEAD, termRows(800000), 'Repayments to pay off $800,000 in 10 to 30 years')}
+<p class="hint">All examples: 6% p.a., monthly repayments, interest charged monthly. ${calcLink({ loan: 600000, rate: 6, years: 15 }, 'Try your own loan and target')}.</p>
+<h2>What it takes</h2>
+<p>Halving the term doesn't double the repayment. On ${money(600000)} at 6%, paying it off in 15 years instead of 30 takes ${money(m15, 0)} a month instead of
+  ${money(M0, 0)}: about ${Math.round((m15 / M0 - 1) * 100)}% more each month, but it cuts the total interest from ${money(S0.totalInterest)} to ${money(s15.totalInterest)}.
+  That's because in a 30-year loan most of the early repayments go on interest, so every extra dollar paid early does a lot of work.</p>
+<h2>At different interest rates</h2>
+${table(['Rate', '10 years', '15 years', '20 years'], rateRows, 'Monthly repayment on $600,000 by rate and term')}
+<p class="hint">Monthly repayment on ${money(600000)}.</p>
+<h2>Keep the 30-year loan, pay it like a shorter one</h2>
+<p>You don't need a shorter loan term to finish sooner. On most variable loans you can keep the 30-year term, with its lower required repayment, and simply
+  pay more. Pay ${money(m20, 0)} a month on a 30-year ${money(600000)} loan and it's gone in 20 years, exactly as if you'd chosen a 20-year term. The difference is that if money gets
+  tight, you can drop back to the ${money(M0, 0)} minimum without asking the lender. ${calcLink({ loan: 600000, rate: 6, years: 30, repay: m20.toFixed(2) }, 'See this in the calculator')}.</p>
+<h2>Ways to get there</h2>
+<ul>
+<li><strong>Pay with every pay.</strong> Weekly or fortnightly repayments that line up with your pay cut the interest a little, and paying half the monthly amount every fortnight adds a 13th month's repayment each year. See <a href="/fortnightly-vs-monthly-repayments/">fortnightly vs monthly</a>.</li>
+<li><strong>Keep repayments the same after a rate cut.</strong> The difference becomes an automatic extra repayment. See <a href="/interest-rate-changes/">rate changes</a>.</li>
+<li><strong>Put lump sums on early.</strong> Tax refunds and bonuses save the most interest when paid in the first years. See <a href="/extra-repayments/">extra repayments</a>.</li>
+<li><strong>Keep savings in an offset account.</strong> They cut the interest the same way, but stay available. See <a href="/offset-vs-redraw/">offset vs redraw</a>.</li>
+</ul>
+<h2>More guides</h2>${tiles('/pay-off-mortgage-in-10-15-or-20-years/')}`,
+    faq: [
+      ['How much extra do I need to pay to pay off my mortgage in 15 years?', `On a ${money(600000)} loan at 6%, about ${money(m15 - M0, 0)} a month on top of the 30-year minimum of ${money(M0, 0)}, for a total of ${money(m15, 0)}. For a different loan, put your balance, rate and 15 years into the calculator: it shows the repayment needed.`],
+      ['Is it better to choose a shorter loan term or just pay extra?', 'Paying extra on a longer term usually gives you the same result with more flexibility, because you can fall back to the lower required repayment if you need to. A shorter term forces the discipline, which some people prefer. On fixed-rate loans extra repayments are often capped, so check first.'],
+      ['Can I pay off a 30-year mortgage in 10 years?', `Yes, if you can afford the repayment. On ${money(600000)} at 6% it takes about ${money(m10, 0)} a month. Most variable loans allow unlimited extra repayments, so you can do it on a 30-year loan without changing the term.`],
+    ],
+  });
+}
+
+// 25 vs 30 years
+{
+  const rowsFor = principal => [20, 25, 30, 35].map(y => { const m = minOf({ principal, years: y }), s = sim({ principal, years: y }, m); return [`${y} years`, money(m, 0), money(s.totalInterest), money(principal + s.totalInterest)]; });
+  const HEAD = ['Term', 'Monthly repayment', 'Total interest', 'Total repaid'];
+  const m25 = minOf({ years: 25 }), s25 = sim({ years: 25 }, m25);
+  const both = sim({ years: 30 }, m25);
+  const diffFor = p => { const a = minOf({ principal: p, years: 25 }), b = minOf({ principal: p }); return [money(p), money(a - b, 0), money(sim({ principal: p }, b).totalInterest - sim({ principal: p, years: 25 }, a).totalInterest)]; };
+  page({
+    path: '/25-vs-30-year-home-loan/', h1: '25 vs 30-year home loan: which is better?', crumbs: [['/guides/', 'Guides']],
+    title: `25 vs 30 Year Home Loan: Repayments and Total Interest Compared | ${SITE_NAME}`,
+    description: 'Compare a 25-year and 30-year Australian home loan: the difference in monthly repayments, total interest, and how to keep the flexibility of the longer term.',
+    body: `<p class="lede">A 30-year loan has lower repayments; a 25-year loan costs less overall. How big is the gap, and is there a way to have both?</p>
+<h2>On a ${money(600000)} loan</h2>
+${table(HEAD, rowsFor(600000), 'Loan terms compared on $600,000')}
+<p class="hint">6% p.a., monthly repayments, interest charged monthly.</p>
+<p>Going from 25 to 30 years lowers the repayment by about ${money(m25 - M0, 0)} a month, but adds about <strong>${money(S0.totalInterest - s25.totalInterest)}</strong> in interest.
+  Five more years of repayments is 60 more payments, and in the early years of a longer loan a bigger share of each repayment goes on interest.</p>
+<h2>The gap at other loan sizes</h2>
+${table(['Loan', '25-year costs more a month by', '30-year costs more in interest by'], [400000, 600000, 800000, 1000000].map(diffFor), '25 compared with 30 years at different loan sizes')}
+<p class="hint">6% p.a., monthly repayments.</p>
+<h2>The best of both: a 30-year loan paid like a 25-year one</h2>
+<p>On a variable loan you can take the 30-year term and pay the 25-year repayment of ${money(m25, 0)} anyway. The loan then finishes in
+  ${duration(both.days)} and costs ${money(both.totalInterest)} in interest, the same as the 25-year loan. But your <em>required</em> repayment is only ${money(M0, 0)},
+  so if you lose income, have a baby or face a big bill, you can drop back without asking the lender or breaking the loan.</p>
+<p>The catch is discipline: nothing forces you to keep paying the higher amount. Setting the higher repayment as an automatic transfer on payday helps.
+  ${calcLink({ loan: 600000, rate: 6, years: 30, repay: m25.toFixed(2) }, 'See this in the calculator')}.</p>
+<h2>When the longer term makes sense</h2>
+<ul>
+<li><strong>Borrowing capacity.</strong> Lenders assess you on the required repayment, so a longer term can mean qualifying for the loan you need.</li>
+<li><strong>A buffer.</strong> A lower required repayment leaves room in the budget for rate rises or a drop in income.</li>
+<li><strong>Higher-interest debts.</strong> If the money saved goes to clearing a credit card or car loan, that usually saves more than the extra mortgage interest costs.</li>
+<li><strong>Offset savings.</strong> Money kept in an offset account cuts the interest on the longer loan while staying available.</li>
+</ul>
+<h2>More guides</h2>${tiles('/25-vs-30-year-home-loan/')}`,
+    faq: [
+      ['Is a 30-year mortgage a bad idea?', 'Not on its own. It costs more interest if you only ever pay the minimum, but it gives you a lower required repayment and more flexibility. If you can afford more, paying extra on a 30-year loan gives you the savings of a shorter loan while keeping that flexibility.'],
+      ['How much more interest does a 30-year loan cost than a 25-year loan?', `On ${money(600000)} at 6%, about ${money(S0.totalInterest - s25.totalInterest)} more over the life of the loan, if you only pay the minimum on each. The difference scales roughly with the loan size.`],
+      ['Can I change my loan term later?', 'Often, yes. Lenders can shorten the term, and some will extend it in hardship or when you refinance. Extending a term lowers repayments but adds interest, so if you refinance, think about keeping your repayment the same.'],
+    ],
+  });
+}
+
+// Refinancing break-even
+{
+  const bal = 500000, yrs = 25, oldRate = 6.2;
+  const cur = { principal: bal, years: yrs, rate: oldRate };
+  const mOld = minOf(cur), sOld = sim(cur, mOld);
+  const newRates = [5.95, 5.7, 5.45];
+  const costs = [1000, 2000, 3000];
+  const rows = newRates.map(r => {
+    const mNew = minOf({ ...cur, rate: r }), sNew = sim({ ...cur, rate: r }, mNew), save = mOld - mNew;
+    return [`${oldRate}% → ${r}%`, `${money(save, 0)} a month`, ...costs.map(c => `${Math.ceil(c / save)} months`), money(sOld.totalInterest - sNew.totalInterest)];
+  });
+  const r2 = 5.7, mNew2 = minOf({ ...cur, rate: r2 }), keep = sim({ ...cur, rate: r2 }, mOld), new2 = sim({ ...cur, rate: r2 }, mNew2);
+  const reset30 = sim({ principal: bal, years: 30, rate: r2 }, minOf({ principal: bal, years: 30, rate: r2 }));
+  page({
+    path: '/refinancing-break-even/', h1: 'Refinancing break-even: is switching worth it?', crumbs: [['/guides/', 'Guides']],
+    title: `Refinancing Break-Even Calculator: How Long Until Switching Pays Off? | ${SITE_NAME}`,
+    description: 'How many months a lower home loan rate takes to pay back the cost of refinancing in Australia, with worked examples and the mistake that wipes out the saving.',
+    body: `<p class="lede">A lower rate saves money every month, but switching lenders costs money up front. The break-even point is how long it takes the first to pay back the second.</p>
+<h2>How long it takes to break even</h2>
+${table(['Rate change', 'Repayment falls by', `Break-even: ${money(1000)} costs`, `${money(2000)} costs`, `${money(3000)} costs`, 'Interest saved over the loan'], rows, 'Refinancing break-even examples')}
+<p class="hint">${money(bal)} owing, ${yrs} years left, monthly repayments, same remaining term after switching. Break-even = switching costs ÷ monthly saving.</p>
+<p>Even a 0.25% cut pays back typical switching costs within one to three years. A cut of half a percent or more often pays back in months.</p>
+<h2>What switching costs</h2>
+<ul>
+<li><strong>Discharge fee</strong> from your current lender, usually a few hundred dollars.</li>
+<li><strong>Government fees</strong> to register the new mortgage and discharge the old one, which vary by state.</li>
+<li><strong>Application, settlement or valuation fees</strong> at the new lender, though many waive them.</li>
+<li><strong>Break costs</strong> if you're leaving a fixed rate early. These can run to thousands, so get a quote first.</li>
+<li><strong>Lenders mortgage insurance</strong> if you owe more than about 80% of the home's value. It usually isn't transferable, so it can make switching uneconomic.</li>
+</ul>
+<p>Some lenders offer a cashback to new borrowers, which can cover these costs or more. Compare the rate and comparison rate too, not just the cashback.</p>
+<h2>The mistake that wipes out the saving</h2>
+<p>When you refinance, the new loan is often set up over a fresh 30 years. That lowers the repayment even more, but it stretches the debt back out:
+  refinancing this ${money(bal)} to ${r2}% over a new 30-year term costs ${money(reset30.totalInterest)} in interest, compared with ${money(new2.totalInterest)} keeping the ${yrs} years left,
+  and ${money(sOld.totalInterest)} by not switching at all.</p>
+<p>The strongest move is to <strong>keep paying what you paid before</strong>. At ${r2}%, paying your old ${money(mOld, 0)} a month clears the loan in ${duration(keep.days)}
+  instead of ${yrs} years, and the total interest falls to ${money(keep.totalInterest)}. ${calcLink({ loan: bal, rate: r2, years: yrs, repay: mOld.toFixed(2) }, 'See this in the calculator')}.</p>
+<h2>Before you switch</h2>
+<p>Ask your current lender for a better rate first. Lenders often cut the rate for existing customers who say they're about to refinance, with no switching costs at all.
+  Have a specific competing rate ready when you call.</p>
+<h2>More guides</h2>${tiles('/refinancing-break-even/')}`,
+    faq: [
+      ['How do I work out the break-even point for refinancing?', 'Add up everything switching costs (discharge, government, application and any break fees, minus any cashback), then divide by how much your repayment falls each month. The answer is the number of months until switching has paid for itself.'],
+      ['Is it worth refinancing for 0.25%?', `Often, yes. On ${money(bal)} with ${yrs} years left, a 0.25% cut lowers the repayment by about ${money(mOld - minOf({ ...cur, rate: 5.95 }), 0)} a month, so ${money(1000)} of switching costs is paid back within about ${Math.ceil(1000 / (mOld - minOf({ ...cur, rate: 5.95 })))} months. It's less worthwhile if you're leaving a fixed rate with break costs, or if you'd have to pay lenders mortgage insurance again.`],
+      ['Should I ask my bank for a lower rate before refinancing?', 'Yes. Lenders often match or beat a competing rate to keep an existing customer, and that saves you the switching costs entirely.'],
     ],
   });
 }
