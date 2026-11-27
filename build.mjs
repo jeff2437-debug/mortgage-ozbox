@@ -96,7 +96,8 @@ ${CF_BEACON ? `<script defer src="https://static.cloudflareinsights.com/beacon.m
 }
 
 /* ---------- worked examples (computed at build time with the same engine as the calculator) ---------- */
-const base = { principal: 600000, rate: 6, years: 30, pay: 'monthly', charge: 'monthly' };
+const P0 = 750000, R0 = 6.75;
+const base = { principal: P0, rate: R0, years: 30, pay: 'monthly', charge: 'monthly' };
 const minOf = o => requiredRepayment({ ...base, ...o });
 const sim = (o, repayment, extra = 0) => simulate({ ...base, ...o, repayment, extra, record: false });
 const table = (head, rows, label) => `<div class="table-wrap" tabindex="0" role="region" aria-label="${esc(label)}"><table><thead><tr>${head.map(h => `<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
@@ -128,14 +129,14 @@ ${calcCard()}
   or you can enter the amount you actually pay. Add an <strong>extra repayment</strong> and the graph shows both balances side by side: the orange line
   is the loan on minimum repayments, the blue line is the loan with your extra payments. The gap between where the two lines hit zero is the time you save.
   Enter an <strong>offset</strong> balance to see how much your savings cut the loan. Add a <strong>redraw</strong> and a purple line shows the loan jumping back up when you take the money out, and how much later it then finishes.</p>
-<p>For example, on a ${money(600000)} loan at 6% over 30 years, the minimum monthly repayment is about ${money(M0, 0)}. Paying an extra ${money(250)}
+<p>For example, on a ${money(P0)} loan at ${R0}% over 30 years, the minimum monthly repayment is about ${money(M0, 0)}. Paying an extra ${money(250)}
   a month clears it in ${duration(e250.days)} instead of 30 years and saves about <strong>${money(S0.totalInterest - e250.totalInterest)}</strong> in interest.</p>
 <h2>Why small extra repayments make such a difference</h2>
-<p>In the early years most of each repayment is interest. On that ${money(600000)} loan, roughly ${money(600000 * 0.06 / 12, 0)} of the first ${money(M0, 0)} repayment
-  is interest and only about ${money(M0 - 600000 * 0.06 / 12, 0)} reduces the debt. Every extra dollar goes straight onto the balance, so it stops
+<p>In the early years most of each repayment is interest. On that ${money(P0)} loan, roughly ${money(P0 * R0 / 100 / 12, 0)} of the first ${money(M0, 0)} repayment
+  is interest and only about ${money(M0 - P0 * R0 / 100 / 12, 0)} reduces the debt. Every extra dollar goes straight onto the balance, so it stops
   interest being charged on that dollar for the rest of the loan. That's why the interest saved ends up larger than the extra you pay in.</p>
-${table(EXTRA_HEAD, extraRows(600000), 'Extra repayments on a $600,000 loan at 6%')}
-<p class="hint">${money(600000)} loan, 6% p.a., 30-year term, monthly repayments, interest charged monthly.</p>
+${table(EXTRA_HEAD, extraRows(P0), `Extra repayments on a ${money(P0)} loan at ${R0}%`)}
+<p class="hint">${money(P0)} loan, ${R0}% p.a., 30-year term, monthly repayments, interest charged monthly.</p>
 <h2>Repayment and interest frequency</h2>
 <p><strong>Repayment frequency</strong> on its own makes little difference if each repayment is worked out for the same term. The big saving comes from
   paying <em>half</em> your monthly repayment every fortnight, because a year has 26 fortnights: that's 13 months' worth of repayments a year.
@@ -161,28 +162,28 @@ page({ path: '/guides/', h1: 'Home loan guides', title: `Home Loan Guides | ${SI
 
 // Extra repayments
 {
-  const rows400 = extraRows(400000, [0, 100, 250, 500]), rows800 = extraRows(800000, [0, 100, 250, 500]);
+  const rows400 = extraRows(500000, [0, 100, 250, 500]), rows800 = extraRows(1000000, [0, 100, 250, 500]);
   const lump = (() => { const b = simulate({ ...base, repayment: M0, extra: 0, record: false }); return b; })();
   // a one-off $10,000 at the start is the same as borrowing $10,000 less with the same repayment
   const l10 = sim({ principal: 590000 }, M0);
   page({
     path: '/extra-repayments/', h1: 'How much do extra repayments save?', crumbs: [['/guides/', 'Guides']],
     title: `Extra Mortgage Repayments: How Much Time and Interest Do They Save? | ${SITE_NAME}`,
-    description: 'Worked examples of extra home loan repayments in Australia: what $100, $250, $500 or $1,000 a month saves on $400k, $600k and $800k loans.',
+    description: 'Worked examples of extra home loan repayments in Australia: what $100, $250, $500 or $1,000 a month saves on $500k, $750k and $1M loans.',
     body: `<p class="lede">Extra repayments are the simplest way to pay off a home loan faster. Here's what different amounts do, worked out to the month.</p>
-<h2>On a ${money(600000)} loan</h2>
-${table(EXTRA_HEAD, extraRows(600000), 'Extra repayments on a $600,000 loan')}
-<h2>On a ${money(400000)} loan</h2>
-${table(EXTRA_HEAD, rows400, 'Extra repayments on a $400,000 loan')}
-<h2>On an ${money(800000)} loan</h2>
-${table(EXTRA_HEAD, rows800, 'Extra repayments on an $800,000 loan')}
-<p class="hint">All examples: 6% p.a., 30-year term, monthly repayments, interest charged monthly. ${calcLink({ loan: 600000, rate: 6, extra: 250 }, 'Try your own numbers')}.</p>
+<h2>On a ${money(P0)} loan</h2>
+${table(EXTRA_HEAD, extraRows(P0), `Extra repayments on a ${money(P0)} loan`)}
+<h2>On a ${money(500000)} loan</h2>
+${table(EXTRA_HEAD, rows400, 'Extra repayments on a $500,000 loan')}
+<h2>On a ${money(1000000)} loan</h2>
+${table(EXTRA_HEAD, rows800, 'Extra repayments on a $1,000,000 loan')}
+<p class="hint">All examples: ${R0}% p.a., 30-year term, monthly repayments, interest charged monthly. ${calcLink({ loan: P0, rate: R0, extra: 250 }, 'Try your own numbers')}.</p>
 <h2>Why it works</h2>
 <p>Interest is charged on whatever you still owe. An extra repayment lowers the balance immediately, so every later interest charge is a little
   smaller, and because your regular repayment stays the same, more of each one goes to the debt. The effect snowballs: in every example above, the interest
   saved is more than the total extra you pay in.</p>
 <h2>Early dollars are worth the most</h2>
-<p>A one-off ${money(10000)} paid in the first month, with no other change, finishes the ${money(600000)} loan in ${duration(l10.days)} instead of 30 years and saves
+<p>A one-off ${money(10000)} paid in the first month, with no other change, finishes the ${money(P0)} loan in ${duration(l10.days)} instead of 30 years and saves
   about ${money(lump.totalInterest - l10.totalInterest)} in interest. The same ${money(10000)} paid in the last few years saves very little, because there's
   little time left for interest to build up on it.</p>
 <h2>Things to check first</h2>
@@ -217,7 +218,7 @@ ${table(['Repayment', 'Amount', 'Paid a year', 'Paid off in', 'Total interest'],
   row('Weekly (minimum for 30 years)', wMin, 'week', w),
   row('Weekly: a quarter of the monthly', M0 / 4, 'week', quarter),
 ], 'Repayment frequency comparison')}
-<p class="hint">${money(600000)} loan, 6% p.a., 30-year term, interest charged monthly.</p>
+<p class="hint">${money(P0)} loan, ${R0}% p.a., 30-year term, interest charged monthly.</p>
 <h2>The trick is in the maths of the calendar</h2>
 <p>A year has 12 months but 26 fortnights. If you pay <strong>half your monthly repayment every fortnight</strong>, you make 26 half-payments a year:
   the same as <strong>13 monthly repayments</strong> instead of 12. That extra month's worth each year, about ${money(M0, 0)} here, goes straight
@@ -227,10 +228,10 @@ ${table(['Repayment', 'Amount', 'Paid a year', 'Paid off in', 'Total interest'],
 <h2>How to do it</h2>
 <p>Ask your lender to set your repayment to <em>half of your current monthly repayment, paid fortnightly</em>, or simply keep the fortnightly
   amount and add the difference as an extra repayment. Lining repayments up with a fortnightly pay cycle also makes budgeting easier.
-  ${calcLink({ loan: 600000, rate: 6, pay: 'fortnightly', repay: (M0 / 2).toFixed(2), extra: 0 }, 'See this example in the calculator')}.</p>
+  ${calcLink({ loan: P0, rate: R0, pay: 'fortnightly', repay: (M0 / 2).toFixed(2), extra: 0 }, 'See this example in the calculator')}.</p>
 <h2>More guides</h2>${tiles('/fortnightly-vs-monthly-repayments/')}`,
     faq: [
-      ['Do fortnightly repayments save money?', `Only if you pay more over the year. Paying half the monthly repayment every fortnight adds the equivalent of one extra monthly repayment a year, which on a ${money(600000)}, 6% loan saves about ${money(a.totalInterest - half.totalInterest)}. A fortnightly repayment worked out for the same term saves very little.`],
+      ['Do fortnightly repayments save money?', `Only if you pay more over the year. Paying half the monthly repayment every fortnight adds the equivalent of one extra monthly repayment a year, which on a ${money(P0)}, ${R0}% loan saves about ${money(a.totalInterest - half.totalInterest)}. A fortnightly repayment worked out for the same term saves very little.`],
       ['Is weekly better than fortnightly?', 'Paying a quarter of the monthly repayment every week works the same way as half-monthly fortnightly: 52 quarter-payments equal 13 monthly repayments. It saves slightly more because money comes off the loan a little sooner.'],
     ],
   });
@@ -240,7 +241,7 @@ ${table(['Repayment', 'Amount', 'Paid a year', 'Paid off in', 'Total interest'],
 {
   const charges = [['daily', 'Daily'], ['weekly', 'Weekly'], ['fortnightly', 'Fortnightly'], ['monthly', 'Monthly'], ['quarterly', 'Quarterly'], ['yearly', 'Yearly']];
   const rows = charges.map(([c, n]) => { const m = minOf({ charge: c }); const r = sim({ charge: c }, m); return [n, money(m, 2), money(r.totalInterest)]; });
-  const day = 600000 * 0.06 / 365;
+  const day = P0 * R0 / 100 / 365;
   page({
     path: '/how-home-loan-interest-is-calculated/', h1: 'How home loan interest is calculated', crumbs: [['/guides/', 'Guides']],
     title: `How Is Home Loan Interest Calculated in Australia? Daily vs Monthly | ${SITE_NAME}`,
@@ -248,14 +249,14 @@ ${table(['Repayment', 'Amount', 'Paid a year', 'Paid off in', 'Total interest'],
     body: `<p class="lede">Your interest rate is quoted per year, but interest isn't charged once a year. Here's what actually happens to your loan each day.</p>
 <h2>Calculated daily, charged monthly</h2>
 <p>Most Australian lenders work out interest <strong>every day</strong> on that day's closing balance, using the annual rate divided by 365.
-  The daily amounts build up and are <strong>charged</strong> (added to the loan) once a month. On a ${money(600000)} balance at 6%:</p>
-<p class="note">${money(600000)} × 6% ÷ 365 = <strong>${money(day, 2)} a day</strong>, or about ${money(day * 365 / 12, 0)} for an average month.</p>
+  The daily amounts build up and are <strong>charged</strong> (added to the loan) once a month. On a ${money(P0)} balance at ${R0}%:</p>
+<p class="note">${money(P0)} × ${R0}% ÷ 365 = <strong>${money(day, 2)} a day</strong>, or about ${money(day * 365 / 12, 0)} for an average month.</p>
 <p>Because interest follows the daily balance, any extra repayment or money in an offset account starts saving interest from the day it lands, not the next month.</p>
 <h2>Does the charging frequency matter?</h2>
 <p>A little. Once interest is charged it becomes part of the balance, and interest is then charged on it too. The more often that happens, the slightly
   higher the cost. Here's the same loan with interest charged at different frequencies:</p>
 ${table(['Interest charged', 'Minimum monthly repayment', 'Total interest over 30 years'], rows, 'Effect of interest charging frequency')}
-<p class="hint">${money(600000)} loan, 6% p.a., 30 years, monthly repayments. Interest accrues daily in every case.</p>
+<p class="hint">${money(P0)} loan, ${R0}% p.a., 30 years, monthly repayments. Interest accrues daily in every case.</p>
 <p>The difference between daily and monthly charging is only a few dollars a month. The rate itself matters far more: see
   <a href="/interest-rate-changes/">what a rate rise or cut does</a>.</p>
 <h2>Comparison rates</h2>
@@ -271,29 +272,29 @@ ${table(['Interest charged', 'Minimum monthly repayment', 'Total interest over 3
 
 // Rate changes
 {
-  const rates = [4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8];
-  const rows = rates.map(r => { const m = minOf({ rate: r }); const s = sim({ rate: r }, m); return [`${r.toFixed(2)}%`, money(m, 0), r === 6 ? '–' : `${m >= M0 ? '+' : '−'}${money(Math.abs(m - M0), 0)}`, money(s.totalInterest)]; });
-  const keep = sim({ rate: 5.5 }, M0), at55 = sim({ rate: 5.5 }, minOf({ rate: 5.5 }));
+  const rates = [5.25, 5.75, 6.25, 6.5, 6.75, 7, 7.25, 7.75, 8.25];
+  const rows = rates.map(r => { const m = minOf({ rate: r }); const s = sim({ rate: r }, m); return [`${r.toFixed(2)}%`, money(m, 0), r === R0 ? '–' : `${m >= M0 ? '+' : '−'}${money(Math.abs(m - M0), 0)}`, money(s.totalInterest)]; });
+  const keep = sim({ rate: R0 - 0.5 }, M0), at55 = sim({ rate: R0 - 0.5 }, minOf({ rate: R0 - 0.5 }));
   page({
     path: '/interest-rate-changes/', h1: 'What a rate rise or cut does to your mortgage', crumbs: [['/guides/', 'Guides']],
-    title: `Interest Rate Rise Calculator: Mortgage Repayments at 4.5% to 8% | ${SITE_NAME}`,
-    description: 'Monthly repayments on a $600,000 home loan at every rate from 4.5% to 8%, and how keeping your repayments the same after a rate cut pays the loan off years sooner.',
+    title: `Interest Rate Rise Calculator: Mortgage Repayments at 5.25% to 8.25% | ${SITE_NAME}`,
+    description: 'Monthly repayments on a $750,000 home loan at rates from 5.25% to 8.25%, and how keeping your repayments the same after a rate cut pays the loan off years sooner.',
     body: `<p class="lede">A rate change of a quarter of a percent sounds small. On a large loan over decades it isn't.</p>
-${table(['Interest rate', 'Monthly repayment', 'Compared with 6%', 'Total interest over 30 years'], rows, 'Repayments at different interest rates')}
-<p class="hint">${money(600000)} loan, 30 years, monthly repayments, interest charged monthly.</p>
-<p>As a rule of thumb, each 0.25% change moves the repayment on this loan by roughly ${money((minOf({ rate: 6.25 }) - M0), 0)} a month, or about
-  ${money((minOf({ rate: 6.25 }) - M0) / 6, 0)} a month for every ${money(100000)} borrowed.</p>
+${table(['Interest rate', 'Monthly repayment', `Compared with ${R0}%`, 'Total interest over 30 years'], rows, 'Repayments at different interest rates')}
+<p class="hint">${money(P0)} loan, 30 years, monthly repayments, interest charged monthly.</p>
+<p>As a rule of thumb, each 0.25% change moves the repayment on this loan by roughly ${money((minOf({ rate: R0 + 0.25 }) - M0), 0)} a month, or about
+  ${money((minOf({ rate: R0 + 0.25 }) - M0) / 6, 0)} a month for every ${money(100000)} borrowed.</p>
 <h2>After a rate cut: keep paying the same</h2>
 <p>When rates fall, lenders usually lower your required repayment. If you can afford to keep paying what you paid before, the difference becomes an
-  automatic extra repayment. If the rate on this loan dropped from 6% to 5.5% and you kept paying ${money(M0, 0)} a month, the loan would finish in
+  automatic extra repayment. If the rate on this loan dropped from ${R0}% to ${R0 - 0.5}% and you kept paying ${money(M0, 0)} a month, the loan would finish in
   <strong>${duration(keep.days)}</strong> instead of 30 years, saving about ${money(at55.totalInterest - keep.totalInterest)} compared with dropping to the new minimum.</p>
 <h2>Preparing for a rise</h2>
 <p>Lenders test whether you could still afford repayments a few percentage points above your actual rate before they approve a loan. You can do the
-  same: put a higher rate into the ${calcLink({ loan: 600000, rate: 7, extra: 0 }, 'calculator')} and see whether the repayment would still fit your budget.
+  same: put a higher rate into the ${calcLink({ loan: P0, rate: R0 + 0.75, extra: 0 }, 'calculator')} and see whether the repayment would still fit your budget.
   Extra repayments made now also build a buffer you can draw on through redraw or offset if rates rise.</p>
 <h2>More guides</h2>${tiles('/interest-rate-changes/')}`,
     faq: [
-      ['How much does a 0.25% rate rise add to repayments?', `On a ${money(600000)}, 30-year loan at around 6%, about ${money(minOf({ rate: 6.25 }) - M0, 0)} a month. Scale it by your loan size: roughly ${money((minOf({ rate: 6.25 }) - M0) / 6, 0)} a month per ${money(100000)} borrowed.`],
+      ['How much does a 0.25% rate rise add to repayments?', `On a ${money(P0)}, 30-year loan at around ${R0}%, about ${money(minOf({ rate: R0 + 0.25 }) - M0, 0)} a month. Scale it by your loan size: roughly ${money((minOf({ rate: R0 + 0.25 }) - M0) / 6, 0)} a month per ${money(100000)} borrowed.`],
       ['Should I keep my repayments the same when rates fall?', 'If your budget allows, it\'s one of the easiest ways to pay a loan off faster: the difference goes straight to the balance. If you have more expensive debts, paying those off first usually saves more.'],
     ],
   });
@@ -308,7 +309,7 @@ ${table(['Interest rate', 'Monthly repayment', 'Compared with 6%', 'Total intere
     return { days: p[0] * 365, interest: r2.totalInterest }; };
   const none = S0;
   const rows = [10000, 20000, 50000].flatMap(amt => {
-    const o = offsetDone(amt), d = sim({ principal: 600000 - amt }, M0);
+    const o = offsetDone(amt), d = sim({ principal: P0 - amt }, M0);
     return [
       [`${money(amt)} in offset`, duration(o.days), money(o.interest), `${duration(none.days - o.days)} · ${money(none.totalInterest - o.interest)}`],
       [`${money(amt)} paid in (redraw)`, duration(d.days), money(d.totalInterest), `${duration(none.days - d.days)} · ${money(none.totalInterest - d.totalInterest)}`],
@@ -323,11 +324,11 @@ ${table(['Interest rate', 'Monthly repayment', 'Compared with 6%', 'Total intere
 <h2>How each one works</h2>
 <p><strong>Redraw:</strong> you pay extra money into the loan itself. The balance drops, so less interest is charged, and you can take ("redraw") the extra back out later.
   <strong>Offset:</strong> your money sits in a transaction account linked to the loan. It stays a separate balance, but the lender charges interest only on the loan
-  balance <em>minus</em> what's in the offset. ${money(20000)} in offset against a ${money(600000)} loan means interest on ${money(580000)}.</p>
+  balance <em>minus</em> what's in the offset. ${money(20000)} in offset against a ${money(P0)} loan means interest on ${money(580000)}.</p>
 <h2>Which saves more interest?</h2>
 <p>Neither: the same amount saves the same interest. Here's ${money(10000)}, ${money(20000)} and ${money(50000)} kept in offset for the life of the loan, compared with paying it in as an extra repayment and leaving it there:</p>
 ${table(['Savings', 'Loan finished in', 'Total interest', 'Time and interest saved'], rows, 'Offset compared with redraw')}
-<p class="hint">${money(600000)} loan, 6% p.a., 30 years, minimum monthly repayments of ${money(M0, 0)} unchanged. The offset loan counts as finished once the offset balance could pay out what's left.</p>
+<p class="hint">${money(P0)} loan, ${R0}% p.a., 30 years, minimum monthly repayments of ${money(M0, 0)} unchanged. The offset loan counts as finished once the offset balance could pay out what's left.</p>
 <p>The figures match because in both cases the same amount of money stops being charged interest. So the decision comes down to the differences below.</p>
 <h2>The differences that matter</h2>
 <ul>
@@ -338,10 +339,10 @@ ${table(['Savings', 'Loan finished in', 'Total interest', 'Time and interest sav
 <li><strong>Habits.</strong> Money in an offset is easy to spend. Some people find that money tucked into the loan, slightly harder to get at, is more likely to stay there.</li>
 </ul>
 <h2>Is an offset account worth its fee?</h2>
-<p>The interest an offset saves in a year is roughly the balance you keep in it times your rate. At 6%:</p>
+<p>The interest an offset saves in a year is roughly the balance you keep in it times your rate. At ${R0}%:</p>
 ${table(['Average offset balance', 'Interest saved a year', 'A month'], yearSave, 'Interest saved by an offset balance')}
 <p>Compare that with the extra cost of the loan that has the offset: its annual fee, plus any difference in rate. If you'd only keep a few thousand dollars there, redraw on a cheaper loan can come out ahead. If your pay goes into the offset and you hold a healthy buffer, the offset usually wins on convenience as well.</p>
-<p>Try it with your own loan: the ${calcLink({ loan: 600000, rate: 6, extra: 0, offset: 20000 }, 'calculator')} has an offset field, and a redraw option that shows what taking money back out does to your loan.</p>
+<p>Try it with your own loan: the ${calcLink({ loan: P0, rate: R0, extra: 0, offset: 20000 }, 'calculator')} has an offset field, and a redraw option that shows what taking money back out does to your loan.</p>
 <h2>More guides</h2>${tiles('/offset-vs-redraw/')}`,
     faq: [
       ['Is an offset account better than redraw?', 'They save exactly the same interest for the same amount of money. An offset is easier to use day to day and keeps savings separate, which can matter for tax if the home later becomes an investment. Redraw is often available on cheaper loans with no package fee. The better choice depends on how much you\'d keep in it and what the offset costs.'],
@@ -364,30 +365,30 @@ ${table(['Average offset balance', 'Interest saved a year', 'A month'], yearSave
   const HEAD = ['Paid off in', 'Monthly repayment', 'More than 30-year minimum', 'Total interest', 'Interest saved'];
   const m10 = minOf({ years: 10 }), m15 = minOf({ years: 15 }), m20 = minOf({ years: 20 });
   const s15 = sim({ years: 15 }, m15);
-  const rateRows = [5, 6, 7].map(r => [`${r}%`, ...[10, 15, 20].map(y => money(minOf({ rate: r, years: y }), 0))]);
+  const rateRows = [6, 6.75, 7.5].map(r => [`${r}%`, ...[10, 15, 20].map(y => money(minOf({ rate: r, years: y }), 0))]);
   page({
     path: '/pay-off-mortgage-in-10-15-or-20-years/', h1: 'How to pay off your mortgage in 10, 15 or 20 years', crumbs: [['/guides/', 'Guides']],
     title: `Pay Off Your Mortgage in 10, 15 or 20 Years: Repayments Needed | ${SITE_NAME}`,
-    description: 'The monthly repayment needed to pay off a $400k, $600k or $800k Australian home loan in 10, 15, 20, 25 or 30 years, and how much interest each saves.',
+    description: 'The monthly repayment needed to pay off a $500k, $750k or $1M Australian home loan in 10, 15, 20, 25 or 30 years, and how much interest each saves.',
     body: `<p class="lede">Most home loans are written for 30 years, but you don't have to take that long. Here's what it costs each month to be mortgage-free sooner, and what it saves.</p>
-<h2>On a ${money(600000)} loan</h2>
-${table(HEAD, termRows(600000), 'Repayments to pay off $600,000 in 10 to 30 years')}
-<h2>On a ${money(400000)} loan</h2>
-${table(HEAD, termRows(400000), 'Repayments to pay off $400,000 in 10 to 30 years')}
-<h2>On an ${money(800000)} loan</h2>
-${table(HEAD, termRows(800000), 'Repayments to pay off $800,000 in 10 to 30 years')}
-<p class="hint">All examples: 6% p.a., monthly repayments, interest charged monthly. ${calcLink({ loan: 600000, rate: 6, years: 15 }, 'Try your own loan and target')}.</p>
+<h2>On a ${money(P0)} loan</h2>
+${table(HEAD, termRows(P0), `Repayments to pay off ${money(P0)} in 10 to 30 years`)}
+<h2>On a ${money(500000)} loan</h2>
+${table(HEAD, termRows(500000), 'Repayments to pay off $500,000 in 10 to 30 years')}
+<h2>On a ${money(1000000)} loan</h2>
+${table(HEAD, termRows(1000000), 'Repayments to pay off $1,000,000 in 10 to 30 years')}
+<p class="hint">All examples: ${R0}% p.a., monthly repayments, interest charged monthly. ${calcLink({ loan: P0, rate: R0, years: 15 }, 'Try your own loan and target')}.</p>
 <h2>What it takes</h2>
-<p>Halving the term doesn't double the repayment. On ${money(600000)} at 6%, paying it off in 15 years instead of 30 takes ${money(m15, 0)} a month instead of
+<p>Halving the term doesn't double the repayment. On ${money(P0)} at ${R0}%, paying it off in 15 years instead of 30 takes ${money(m15, 0)} a month instead of
   ${money(M0, 0)}: about ${Math.round((m15 / M0 - 1) * 100)}% more each month, but it cuts the total interest from ${money(S0.totalInterest)} to ${money(s15.totalInterest)}.
   That's because in a 30-year loan most of the early repayments go on interest, so every extra dollar paid early does a lot of work.</p>
 <h2>At different interest rates</h2>
-${table(['Rate', '10 years', '15 years', '20 years'], rateRows, 'Monthly repayment on $600,000 by rate and term')}
-<p class="hint">Monthly repayment on ${money(600000)}.</p>
+${table(['Rate', '10 years', '15 years', '20 years'], rateRows, `Monthly repayment on ${money(P0)} by rate and term`)}
+<p class="hint">Monthly repayment on ${money(P0)}.</p>
 <h2>Keep the 30-year loan, pay it like a shorter one</h2>
 <p>You don't need a shorter loan term to finish sooner. On most variable loans you can keep the 30-year term, with its lower required repayment, and simply
-  pay more. Pay ${money(m20, 0)} a month on a 30-year ${money(600000)} loan and it's gone in 20 years, exactly as if you'd chosen a 20-year term. The difference is that if money gets
-  tight, you can drop back to the ${money(M0, 0)} minimum without asking the lender. ${calcLink({ loan: 600000, rate: 6, years: 30, repay: m20.toFixed(2) }, 'See this in the calculator')}.</p>
+  pay more. Pay ${money(m20, 0)} a month on a 30-year ${money(P0)} loan and it's gone in 20 years, exactly as if you'd chosen a 20-year term. The difference is that if money gets
+  tight, you can drop back to the ${money(M0, 0)} minimum without asking the lender. ${calcLink({ loan: P0, rate: R0, years: 30, repay: m20.toFixed(2) }, 'See this in the calculator')}.</p>
 <h2>Ways to get there</h2>
 <ul>
 <li><strong>Pay with every pay.</strong> Weekly or fortnightly repayments that line up with your pay cut the interest a little, and paying half the monthly amount every fortnight adds a 13th month's repayment each year. See <a href="/fortnightly-vs-monthly-repayments/">fortnightly vs monthly</a>.</li>
@@ -397,9 +398,9 @@ ${table(['Rate', '10 years', '15 years', '20 years'], rateRows, 'Monthly repayme
 </ul>
 <h2>More guides</h2>${tiles('/pay-off-mortgage-in-10-15-or-20-years/')}`,
     faq: [
-      ['How much extra do I need to pay to pay off my mortgage in 15 years?', `On a ${money(600000)} loan at 6%, about ${money(m15 - M0, 0)} a month on top of the 30-year minimum of ${money(M0, 0)}, for a total of ${money(m15, 0)}. For a different loan, put your balance, rate and 15 years into the calculator: it shows the repayment needed.`],
+      ['How much extra do I need to pay to pay off my mortgage in 15 years?', `On a ${money(P0)} loan at ${R0}%, about ${money(m15 - M0, 0)} a month on top of the 30-year minimum of ${money(M0, 0)}, for a total of ${money(m15, 0)}. For a different loan, put your balance, rate and 15 years into the calculator: it shows the repayment needed.`],
       ['Is it better to choose a shorter loan term or just pay extra?', 'Paying extra on a longer term usually gives you the same result with more flexibility, because you can fall back to the lower required repayment if you need to. A shorter term forces the discipline, which some people prefer. On fixed-rate loans extra repayments are often capped, so check first.'],
-      ['Can I pay off a 30-year mortgage in 10 years?', `Yes, if you can afford the repayment. On ${money(600000)} at 6% it takes about ${money(m10, 0)} a month. Most variable loans allow unlimited extra repayments, so you can do it on a 30-year loan without changing the term.`],
+      ['Can I pay off a 30-year mortgage in 10 years?', `Yes, if you can afford the repayment. On ${money(P0)} at ${R0}% it takes about ${money(m10, 0)} a month. Most variable loans allow unlimited extra repayments, so you can do it on a 30-year loan without changing the term.`],
     ],
   });
 }
@@ -416,20 +417,20 @@ ${table(['Rate', '10 years', '15 years', '20 years'], rateRows, 'Monthly repayme
     title: `25 vs 30 Year Home Loan: Repayments and Total Interest Compared | ${SITE_NAME}`,
     description: 'Compare a 25-year and 30-year Australian home loan: the difference in monthly repayments, total interest, and how to keep the flexibility of the longer term.',
     body: `<p class="lede">A 30-year loan has lower repayments; a 25-year loan costs less overall. How big is the gap, and is there a way to have both?</p>
-<h2>On a ${money(600000)} loan</h2>
-${table(HEAD, rowsFor(600000), 'Loan terms compared on $600,000')}
-<p class="hint">6% p.a., monthly repayments, interest charged monthly.</p>
+<h2>On a ${money(P0)} loan</h2>
+${table(HEAD, rowsFor(P0), `Loan terms compared on ${money(P0)}`)}
+<p class="hint">${R0}% p.a., monthly repayments, interest charged monthly.</p>
 <p>Going from 25 to 30 years lowers the repayment by about ${money(m25 - M0, 0)} a month, but adds about <strong>${money(S0.totalInterest - s25.totalInterest)}</strong> in interest.
   Five more years of repayments is 60 more payments, and in the early years of a longer loan a bigger share of each repayment goes on interest.</p>
 <h2>The gap at other loan sizes</h2>
-${table(['Loan', '25-year costs more a month by', '30-year costs more in interest by'], [400000, 600000, 800000, 1000000].map(diffFor), '25 compared with 30 years at different loan sizes')}
-<p class="hint">6% p.a., monthly repayments.</p>
+${table(['Loan', '25-year costs more a month by', '30-year costs more in interest by'], [500000, 750000, 1000000, 1250000].map(diffFor), '25 compared with 30 years at different loan sizes')}
+<p class="hint">${R0}% p.a., monthly repayments.</p>
 <h2>The best of both: a 30-year loan paid like a 25-year one</h2>
 <p>On a variable loan you can take the 30-year term and pay the 25-year repayment of ${money(m25, 0)} anyway. The loan then finishes in
   ${duration(both.days)} and costs ${money(both.totalInterest)} in interest, the same as the 25-year loan. But your <em>required</em> repayment is only ${money(M0, 0)},
   so if you lose income, have a baby or face a big bill, you can drop back without asking the lender or breaking the loan.</p>
 <p>The catch is discipline: nothing forces you to keep paying the higher amount. Setting the higher repayment as an automatic transfer on payday helps.
-  ${calcLink({ loan: 600000, rate: 6, years: 30, repay: m25.toFixed(2) }, 'See this in the calculator')}.</p>
+  ${calcLink({ loan: P0, rate: R0, years: 30, repay: m25.toFixed(2) }, 'See this in the calculator')}.</p>
 <h2>When the longer term makes sense</h2>
 <ul>
 <li><strong>Borrowing capacity.</strong> Lenders assess you on the required repayment, so a longer term can mean qualifying for the loan you need.</li>
@@ -440,7 +441,7 @@ ${table(['Loan', '25-year costs more a month by', '30-year costs more in interes
 <h2>More guides</h2>${tiles('/25-vs-30-year-home-loan/')}`,
     faq: [
       ['Is a 30-year mortgage a bad idea?', 'Not on its own. It costs more interest if you only ever pay the minimum, but it gives you a lower required repayment and more flexibility. If you can afford more, paying extra on a 30-year loan gives you the savings of a shorter loan while keeping that flexibility.'],
-      ['How much more interest does a 30-year loan cost than a 25-year loan?', `On ${money(600000)} at 6%, about ${money(S0.totalInterest - s25.totalInterest)} more over the life of the loan, if you only pay the minimum on each. The difference scales roughly with the loan size.`],
+      ['How much more interest does a 30-year loan cost than a 25-year loan?', `On ${money(P0)} at ${R0}%, about ${money(S0.totalInterest - s25.totalInterest)} more over the life of the loan, if you only pay the minimum on each. The difference scales roughly with the loan size.`],
       ['Can I change my loan term later?', 'Often, yes. Lenders can shorten the term, and some will extend it in hardship or when you refinance. Extending a term lowers repayments but adds interest, so if you refinance, think about keeping your repayment the same.'],
     ],
   });
@@ -448,16 +449,16 @@ ${table(['Loan', '25-year costs more a month by', '30-year costs more in interes
 
 // Refinancing break-even
 {
-  const bal = 500000, yrs = 25, oldRate = 6.2;
+  const bal = 650000, yrs = 25, oldRate = 7;
   const cur = { principal: bal, years: yrs, rate: oldRate };
   const mOld = minOf(cur), sOld = sim(cur, mOld);
-  const newRates = [5.95, 5.7, 5.45];
+  const newRates = [6.75, 6.5, 6.25];
   const costs = [1000, 2000, 3000];
   const rows = newRates.map(r => {
     const mNew = minOf({ ...cur, rate: r }), sNew = sim({ ...cur, rate: r }, mNew), save = mOld - mNew;
     return [`${oldRate}% → ${r}%`, `${money(save, 0)} a month`, ...costs.map(c => `${Math.ceil(c / save)} months`), money(sOld.totalInterest - sNew.totalInterest)];
   });
-  const r2 = 5.7, mNew2 = minOf({ ...cur, rate: r2 }), keep = sim({ ...cur, rate: r2 }, mOld), new2 = sim({ ...cur, rate: r2 }, mNew2);
+  const r2 = 6.5, mNew2 = minOf({ ...cur, rate: r2 }), keep = sim({ ...cur, rate: r2 }, mOld), new2 = sim({ ...cur, rate: r2 }, mNew2);
   const reset30 = sim({ principal: bal, years: 30, rate: r2 }, minOf({ principal: bal, years: 30, rate: r2 }));
   page({
     path: '/refinancing-break-even/', h1: 'Refinancing break-even: is switching worth it?', crumbs: [['/guides/', 'Guides']],
@@ -489,7 +490,7 @@ ${table(['Rate change', 'Repayment falls by', `Break-even: ${money(1000)} costs`
 <h2>More guides</h2>${tiles('/refinancing-break-even/')}`,
     faq: [
       ['How do I work out the break-even point for refinancing?', 'Add up everything switching costs (discharge, government, application and any break fees, minus any cashback), then divide by how much your repayment falls each month. The answer is the number of months until switching has paid for itself.'],
-      ['Is it worth refinancing for 0.25%?', `Often, yes. On ${money(bal)} with ${yrs} years left, a 0.25% cut lowers the repayment by about ${money(mOld - minOf({ ...cur, rate: 5.95 }), 0)} a month, so ${money(1000)} of switching costs is paid back within about ${Math.ceil(1000 / (mOld - minOf({ ...cur, rate: 5.95 })))} months. It's less worthwhile if you're leaving a fixed rate with break costs, or if you'd have to pay lenders mortgage insurance again.`],
+      ['Is it worth refinancing for 0.25%?', `Often, yes. On ${money(bal)} with ${yrs} years left, a 0.25% cut lowers the repayment by about ${money(mOld - minOf({ ...cur, rate: newRates[0] }), 0)} a month, so ${money(1000)} of switching costs is paid back within about ${Math.ceil(1000 / (mOld - minOf({ ...cur, rate: newRates[0] })))} months. It's less worthwhile if you're leaving a fixed rate with break costs, or if you'd have to pay lenders mortgage insurance again.`],
       ['Should I ask my bank for a lower rate before refinancing?', 'Yes. Lenders often match or beat a competing rate to keep an existing customer, and that saves you the switching costs entirely.'],
     ],
   });
@@ -497,7 +498,7 @@ ${table(['Rate change', 'Repayment falls by', `Break-even: ${money(1000)} costs`
 
 // Interest-only vs P&I
 {
-  const P = 600000, ioYears = 5, piRate = 6, ioRate = 6.6;
+  const P = P0, ioYears = 5, piRate = R0, ioRate = 7.35;
   const scen = (ioR) => {
     const ioPay = P * ioR / 100 / 12, ioInt = P * ioR / 100 * ioYears;
     const after = minOf({ principal: P, years: 30 - ioYears, rate: piRate }), s = sim({ principal: P, years: 30 - ioYears, rate: piRate }, after);
@@ -543,7 +544,7 @@ ${table(['Repayment type', 'Monthly repayment, first 5 years', 'Monthly repaymen
 
 // LVR and LMI
 {
-  const price = 600000;
+  const price = 850000;
   const lvrs = [80, 85, 90, 95];
   const rows = lvrs.map(l => { const loan = price * l / 100, m = minOf({ principal: loan }), s = sim({ principal: loan }, m); return [`${100 - l}% (${money(price * (100 - l) / 100)})`, money(loan), `${l}%`, money(m, 0), money(s.totalInterest), l > 80 ? 'Usually' : 'No']; });
   const l80 = minOf({ principal: price * 0.8 }), l95 = minOf({ principal: price * 0.95 });
@@ -555,10 +556,10 @@ ${table(['Repayment type', 'Monthly repayment, first 5 years', 'Monthly repaymen
     description: 'What loan-to-value ratio (LVR) means, why a 20% deposit avoids lenders mortgage insurance, what LMI typically costs at 85%, 90% and 95% LVR, and ways to avoid it.',
     body: `<p class="lede">The size of your deposit sets your loan-to-value ratio, or LVR. Above 80%, most lenders add lenders mortgage insurance, and a bigger loan costs more interest too.</p>
 <h2>What LVR means</h2>
-<p>LVR is the loan divided by the property's value. Borrow ${money(540000)} to buy a ${money(price)} home and your LVR is 90%. Lenders treat 80% as the line: at or below it you're a standard borrower; above it, you usually pay LMI.</p>
+<p>LVR is the loan divided by the property's value. Borrow ${money(price * 0.9)} to buy a ${money(price)} home and your LVR is 90%. Lenders treat 80% as the line: at or below it you're a standard borrower; above it, you usually pay LMI.</p>
 <h2>Deposit, LVR and repayments on a ${money(price)} home</h2>
-${table(['Deposit', 'Loan', 'LVR', 'Monthly repayment', 'Total interest', 'LMI?'], rows, 'Loan size by deposit on a $600,000 home')}
-<p class="hint">6% p.a., 30 years, monthly repayments. Excludes LMI, stamp duty and other purchase costs.</p>
+${table(['Deposit', 'Loan', 'LVR', 'Monthly repayment', 'Total interest', 'LMI?'], rows, `Loan size by deposit on a ${money(price)} home`)}
+<p class="hint">${R0}% p.a., 30 years, monthly repayments. Excludes LMI, stamp duty and other purchase costs.</p>
 <p>Going from a 20% to a 5% deposit means borrowing ${money(price * 0.15)} more, which adds about ${money(l95 - l80, 0)} a month and ${money(i95 - i80)} in interest over 30 years, before any LMI.</p>
 <h2>What LMI costs</h2>
 <p>LMI is a one-off premium that protects the <em>lender</em>, not you, if you default and the sale doesn't cover the debt. It depends on the lender, the insurer, the loan size and especially the LVR. Published estimates for a ${money(500000)} home are roughly:</p>

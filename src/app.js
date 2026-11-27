@@ -10,8 +10,8 @@ function init(box) {
   const num = (k, d) => { const v = parseFloat(q.get(k)); return Number.isFinite(v) && v >= 0 ? v : d; };
   const pick = (k, d, ok) => (ok.includes(q.get(k)) ? q.get(k) : d);
   const st = {
-    principal: num('loan', +box.dataset.loan || 600000),
-    rate: num('rate', +box.dataset.rate || 6),
+    principal: num('loan', +box.dataset.loan || 750000),
+    rate: num('rate', +box.dataset.rate || 6.75),
     years: num('years', 30),
     pay: pick('pay', box.dataset.pay || 'monthly', ['weekly', 'fortnightly', 'monthly']),
     charge: pick('charge', 'monthly', ['daily', 'weekly', 'fortnightly', 'monthly', 'quarterly', 'yearly']),
